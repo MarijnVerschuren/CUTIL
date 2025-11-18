@@ -17,6 +17,7 @@ set(PROJECT_TEST_DIR "test")
 add_compile_options(
         # this flag adds pre processing to format strings in the case of NEGATIVE color effect (adds 1 whole copy)
         -DNEGATIVE_NEWLINE_CORRECTION
+        -flto
 )
 
 set(SOURCE_FILES

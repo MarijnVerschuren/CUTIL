@@ -27,7 +27,7 @@ typedef enum {
 
 
 #ifdef __cplusplus
-color_t operator|(color_t a, color_t b) { return (color_t)(((int)a) | ((int)b)); }
+inline color_t operator|(color_t a, color_t b) { return (color_t)(((int)a) | ((int)b)); }
 extern "C" {
 #endif
 
