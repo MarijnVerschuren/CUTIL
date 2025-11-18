@@ -1,5 +1,5 @@
 //
-// Created by marijn on 11/16/25.
+// Created by marijn on 11/17/25.
 //
 #include "cprintf.h"
 #include <stdint.h>
@@ -9,14 +9,10 @@
 int main() {
 	for (uint8_t e = 0; e < 8; e++) {
 		for (uint8_t c = 0; c < 8; c++) {
-			cprintf(c | (e << 4), "c: %d, e: %d\n", c, e);
+			cprintf((color_t)(c | (e << 4)), "c: %d, e: %d\n", c, e);
 		}
 		printf("\n");
 	}
-
-	cprintf(RED | BOLD, "Hello World!, %f\n", 3.14159f);
-
-	cprintf(TEAL | NEGATIVE, "Hello World!\n");
 
 	return 0;
 }

@@ -25,7 +25,18 @@ typedef enum {
 	NEGATIVE =	0x70
 } color_t;
 
+
+#ifdef __cplusplus
+color_t operator|(color_t a, color_t b) { return (color_t)(((int)a) | ((int)b)); }
+extern "C" {
+#endif
+
+
 void cprintf(color_t col, const char *__restrict fmt, ...);
 
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif //CPRINTF_CPRINTF_H

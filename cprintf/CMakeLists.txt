@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.31)
-project(cprintf C)
+project(cprintf LANGUAGES C CXX)
 project(cprintf VERSION 0.0.0)
 
 set(CMAKE_C_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 
 include_directories(/usr/local/include inc)
 
@@ -21,7 +22,15 @@ add_compile_options(
 set(SOURCE_FILES
     ${PROJECT_SOURCE_DIR}/cprintf.c
 )
-add_library(cprintf STATIC ${SOURCE_FILES})
+add_library(cprintf_static STATIC ${SOURCE_FILES})
 add_library(cprintf_shared SHARED ${SOURCE_FILES})
 
-add_executable(cprintf_test ${SOURCE_FILES} ${PROJECT_TEST_DIR}/main.c)
+add_executable(cprintf_c_static_test ${PROJECT_TEST_DIR}/main.c)
+add_executable(cprintf_cpp_static_test ${PROJECT_TEST_DIR}/main.cpp)
+add_executable(cprintf_c_shared_test ${PROJECT_TEST_DIR}/main.c)
+add_executable(cprintf_cpp_shared_test ${PROJECT_TEST_DIR}/main.cpp)
+
+target_link_libraries(cprintf_c_static_test PRIVATE cprintf_static)
+target_link_libraries(cprintf_cpp_static_test PRIVATE cprintf_static)
+target_link_libraries(cprintf_c_shared_test PRIVATE cprintf_shared)
+target_link_libraries(cprintf_cpp_shared_test PRIVATE cprintf_shared)
