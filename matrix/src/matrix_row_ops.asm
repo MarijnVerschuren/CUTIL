@@ -7,6 +7,7 @@ section .text
 
 global matrix_swap_rows
 global matrix_add_rows
+global matrix_scale_row
 
 
 ; args:
@@ -99,3 +100,38 @@ matrix_add_rows:
 	ret
 
 
+; args:
+;	rdi		->	data
+;	rsi		->	m		-> 8 * m
+;	rdx		->	r(ow)
+;	xmm0	->	scalar
+;
+; vars:
+;	rax		->	i
+;	ymm1	->	src row-let
+;	r8		->	8*m - 32 (for AVX256)
+matrix_scale_row:
+	xor rax, rax
+	shl rsi, 3			; m *= 8
+	imul rdx, rsi		; r *= 8*m (row offset)
+	add rdx, rdi		; r*m*8 + data (row ptr)
+%ifdef AVX256
+	vbroadcastsd ymm0, xmm0	; broadcast scalar xmm0 = x -> ymm0 = [x,x,x,x]
+	lea r8, [rsi - 32]	; r8 = 8*m - 32
+	.SIMD_loop:
+	cmp rax, r8			; i >= 8*m - 32
+	jnl .SISD_loop		; end SIMD loop if less then 256b is left
+	vmovupd ymm1, [rdx + rax]
+	vmulpd ymm1, ymm1, ymm0
+	vmovupd [rdx + rax], ymm1
+	add rax, 32
+	jmp .SIMD_loop
+%endif
+	.SISD_loop:
+    movsd xmm1, [rdx + rax]
+    mulsd xmm1, xmm0    ; xmm1 = xmm1 * xmm0
+    movsd [rdx + rax], xmm1
+	add rax, 8
+	cmp rax, rsi
+	jl .SISD_loop
+	ret

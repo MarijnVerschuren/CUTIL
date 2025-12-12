@@ -4,6 +4,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "types.h"
 
@@ -36,7 +37,9 @@ public:
 	matrix(uint32_t n, uint32_t m);
 	~matrix(void);
 
-	matrix& reduce(void);
+	void init_rand(void);
+
+	void reduce(void);
 
 	f64_t& operator()(uint32_t i, uint32_t j);
 	void print(void) const;
@@ -56,7 +59,9 @@ public:
 
 	sq_matrix& L_matrix(void);
 	sq_matrix& U_matrix(void);
+	matrix& get_RRWS(void) { if (!this->RRWS) { this->new_RRWS(); } return *this->RRWS; }  // TODO: this is purely for debug purposes
 
+	sq_matrix& inverse(void);
 	//void row_reduce(void);
 
 private:
@@ -65,6 +70,7 @@ private:
 
 	det_t det{};
 	sq_matrix* LU[2] = {nullptr, nullptr};
+	sq_matrix* _inverse = nullptr;
 	matrix* RRWS = nullptr;  // row reduction workspace
 };
 
