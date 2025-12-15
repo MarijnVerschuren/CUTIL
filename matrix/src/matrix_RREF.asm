@@ -1,17 +1,17 @@
 ;////////////////////////////////////////////////
-;// file: matrix_REF.asm                       //
+;// file: matrix_RREF.asm                      //
 ;// author: Marijn Verschuren                  //
-;// purpose: implement REF operation           //
+;// purpose: implement RREF operation          //
 ;////////////////////////////////////////////////
 section .text
 
-global matrix_REF_64
-global matrix_REF_32
+global matrix_RREF_64
+global matrix_RREF_32
 
 
 
 ; ============================================================
-; matrix_REF_64
+; matrix_RREF_64
 ;
 ; arguments:
 ;   rdi -> pointer to matrix data (double*)
@@ -36,7 +36,7 @@ global matrix_REF_32
 ;   ymm3 -> broadcasted scalar factor
 ;
 ; ============================================================
-matrix_REF_64:
+matrix_RREF_64:
     shl rdx, 3                  ; rdx = m * 8 (bytes per row)
 
 %ifdef AVX256
@@ -62,12 +62,13 @@ matrix_REF_64:
     inc rax                     ; j++
     cmp rax, rsi
     jl .pivot_loop              ; continue if j < n
-
     jmp .REF_loop_continue      ; no pivot found in this column
 
 .pivot_end:
+
     cmp r9, rax                 ; j == i ?
     je .no_row_swap             ; skip swap if same row
+
 
 ; --------------------------------------------------------
 ; row swap: swap row i with row j
@@ -104,11 +105,48 @@ matrix_REF_64:
 
 .no_row_swap:
 
+
+; --------------------------------------------------------
+; row scale: scale pivot row to 1
+; --------------------------------------------------------
+	xor rax, rax
+
+	movsd xmm1, qword [rel f64_one]	; xmm1 = 1.0
+	divsd xmm1, xmm0				; xmm1 = 1.0 / xmm0
+
+%ifdef AVX256
+	vbroadcastsd ymm0, xmm1	; broadcast scalar xmm1 = x -> ymm0 = [x,x,x,x]
+.SIMD_scale_loop:
+	cmp rax, r8			; i >= 8*m - 32
+	jnl .SISD_scale_loop_cmp		; end SIMD loop if less then 256b is left
+
+	vmovupd	ymm1, [r10 + rax]
+	vmulpd	ymm1, ymm1, ymm0
+	vmovupd	[r10 + rax], ymm1
+
+	add rax, 32
+	jmp .SIMD_scale_loop
+%endif
+
+.SISD_scale_loop:
+    movsd xmm1, [r10 + rax]
+    mulsd xmm1, xmm0    ; xmm1 = xmm1 * xmm0
+    movsd [r10 + rax], xmm1
+	add rax, 8
+
+.SISD_scale_loop_cmp:
+	cmp rax, rdx
+	jl .SISD_scale_loop
+
+
 ; --------------------------------------------------------
 ; row add: add scaled version of row i to j
 ; --------------------------------------------------------
-    lea r11, [r9 + 1]           ; i2 = i + 1
+    xor r11, r11
 
+	; check r11 != i for i = 0 (done later too but pre loop check is added to prevent cache misses)
+    cmp r11, r9
+    je .REF_row_add_skip
 .REF_row_add_loop:              ; eliminate below pivot
 
     xor rax, rax
@@ -117,7 +155,6 @@ matrix_REF_64:
     add rcx, rdi                ; rcx = &matrix[i2][0]
 
     movsd xmm3, [rcx + r9 * 8]    ; load matrix[i2][i]
-    divsd xmm3, xmm0            ; factor = A[i2][i] / pivot
     xorpd xmm3, [rel f64_neg] ; factor = -factor
 
 %ifdef AVX256
@@ -148,21 +185,24 @@ matrix_REF_64:
     cmp rax, rdx
     jl .SISD_add_loop
 
+.REF_row_add_skip:
     inc r11
+    cmp r11, r9
+    je .REF_row_add_skip
     cmp r11, rsi
     jl .REF_row_add_loop
 
 .REF_loop_continue:
     inc r9
-    lea r10, [r9 + 1]
-    cmp r10, rsi
+    cmp r9, rsi
     jl .REF_loop
     ret
 
 
 
+
 ; ============================================================
-; matrix_REF_32
+; matrix_RREF_32
 ;
 ; arguments:
 ;   rdi -> pointer to matrix data (double*)
@@ -187,11 +227,11 @@ matrix_REF_64:
 ;   ymm3 -> broadcasted scalar factor
 ;
 ; ============================================================
-matrix_REF_32:
+matrix_RREF_32:
     shl rdx, 2                  ; rdx = m * 4 (bytes per row)
 
 %ifdef AVX256
-    lea r8, [rdx - 32]           ; r8 = 8*m - 32 (last full YMM chunk)
+    lea r8, [rdx - 32]           ; r8 = 4*m - 32 (last full YMM chunk)
 %endif
 
     xor r9, r9                  ; i = 0
@@ -200,8 +240,8 @@ matrix_REF_32:
     xorps xmm1, xmm1            ; xmm1 = 0.0 (used for zero compare)
 
     mov rax, r9                 ; j = i
-    mov r10, rdx                ; r10 = 8*m
-    imul r10, r9                ; r10 = i * 8*m
+    mov r10, rdx                ; r10 = 4*m
+    imul r10, r9                ; r10 = i * 4*m
     add r10, rdi                ; r10 = &matrix[i][0]
 
 .pivot_loop:                    ; search pivot in column i
@@ -213,19 +253,20 @@ matrix_REF_32:
     inc rax                     ; j++
     cmp rax, rsi
     jl .pivot_loop              ; continue if j < n
-
     jmp .REF_loop_continue      ; no pivot found in this column
 
 .pivot_end:
+
     cmp r9, rax                 ; j == i ?
     je .no_row_swap             ; skip swap if same row
+
 
 ; --------------------------------------------------------
 ; row swap: swap row i with row j
 ; --------------------------------------------------------
     xor rax, rax
-    mov rcx, rdx                ; rcx = 4*m
-    imul rcx, r9                ; rcx = i * 4*m
+    mov rcx, rdx                ; rcx = 8*m
+    imul rcx, r9                ; rcx = i * 8*m
     add rcx, rdi                ; rcx = &matrix[i][0]
 
 %ifdef AVX256
@@ -255,11 +296,48 @@ matrix_REF_32:
 
 .no_row_swap:
 
+
+; --------------------------------------------------------
+; row scale: scale pivot row to 1
+; --------------------------------------------------------
+	mov     eax, 0x3F800000			; eax = 1.0
+	movd	xmm1, eax  				; xmm1 = 1.0
+	divss	xmm1, xmm0				; xmm1 = 1.0 / xmm0
+
+	xor rax, rax
+%ifdef AVX256
+	vbroadcastss ymm0, xmm1	; broadcast scalar xmm1 = x -> ymm0 = [x,x,x,x]
+.SIMD_scale_loop:
+	cmp rax, r8			; i >= 8*m - 32
+	jnl .SISD_scale_loop_cmp		; end SIMD loop if less then 256b is left
+
+	vmovups	ymm1, [r10 + rax]
+	vmulps	ymm1, ymm1, ymm0
+	vmovups	[r10 + rax], ymm1
+
+	add rax, 32
+	jmp .SIMD_scale_loop
+%endif
+
+.SISD_scale_loop:
+    movss xmm1, [r10 + rax]
+    mulss xmm1, xmm0    ; xmm1 = xmm1 * xmm0
+    movss [r10 + rax], xmm1
+	add rax, 4
+
+.SISD_scale_loop_cmp:
+	cmp rax, rdx
+	jl .SISD_scale_loop
+
+
 ; --------------------------------------------------------
 ; row add: add scaled version of row i to j
 ; --------------------------------------------------------
-    lea r11, [r9 + 1]           ; i2 = i + 1
+    xor r11, r11
 
+	; check r11 != i for i = 0 (done later too but pre loop check is added to prevent cache misses)
+    cmp r11, r9
+    je .REF_row_add_skip
 .REF_row_add_loop:              ; eliminate below pivot
 
     xor rax, rax
@@ -268,8 +346,7 @@ matrix_REF_32:
     add rcx, rdi                ; rcx = &matrix[i2][0]
 
     movss xmm3, [rcx + r9 * 4]    ; load matrix[i2][i]
-    divss xmm3, xmm0            ; factor = A[i2][i] / pivot
-    xorps xmm3, [rel f32_neg] ; factor = -factor
+    xorps xmm3, [rel f32_neg]	; factor = -factor
 
 %ifdef AVX256
     vbroadcastss ymm3, xmm3     ; broadcast factor
@@ -299,21 +376,23 @@ matrix_REF_32:
     cmp rax, rdx
     jl .SISD_add_loop
 
+.REF_row_add_skip:
     inc r11
+    cmp r11, r9
+    je .REF_row_add_skip
     cmp r11, rsi
     jl .REF_row_add_loop
 
 .REF_loop_continue:
     inc r9
-    lea r10, [r9 + 1]
-    cmp r10, rsi
+    cmp r9, rsi
     jl .REF_loop
     ret
-
 
 
 ; TODO: use immediates and regs!!!
 section .rodata
 align 16
 f64_neg:	dq 0x8000000000000000	; -0.0
+f64_one:	dq 0x3FF0000000000000   ;  1.0
 f32_neg:	dd 0x80000000			; -0.0

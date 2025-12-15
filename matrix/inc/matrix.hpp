@@ -10,7 +10,6 @@
 
 
 namespace MAT {
-class sq_matrix;
 
 
 /*!<
@@ -30,38 +29,40 @@ private:
 /*!<
  * matrix
  * */
+template<typename elem_t>
 class matrix {
-friend class sq_matrix;
+template <typename> friend class sq_matrix;
 public:
 	// TODO: copy constructor: matrix(const matrix&) = default;
 	matrix(uint32_t n, uint32_t m);
-	~matrix(void);
+	~matrix(void) { free(this->data); }
 
 	void init_rand(void);
 
 	void REF(void);
-	void REF_C(void);
 	void RREF(void);
 
-	f64_t& operator()(uint32_t i, uint32_t j);
+	elem_t& operator()(uint32_t i, uint32_t j) { return this->data[i * m + j]; }
 	void print(void) const;
 
 private:
 	uint32_t n, m;
-	f64_t* data;
+	elem_t* data;
 };
-
+template class matrix<f64_t>;
+template class matrix<f32_t>;
 
 /*!<
  * square matrix
  * */
-class sq_matrix : public matrix {
+template<typename elem_t>
+class sq_matrix : public matrix<elem_t> {
 public:
-	sq_matrix(const uint32_t dim) : matrix(dim, dim) {};
+	sq_matrix(const uint32_t dim) : matrix<elem_t>(dim, dim) {};
 
-	sq_matrix& L_matrix(void);
-	sq_matrix& U_matrix(void);
-	matrix& get_RRWS(void) { if (!this->RRWS) { this->new_RRWS(); } return *this->RRWS; }  // TODO: this is purely for debug purposes
+	//sq_matrix& L_matrix(void);
+	//sq_matrix& U_matrix(void);
+	matrix<elem_t>& get_RRWS(void) { if (!this->RRWS) { this->new_RRWS(); } return *this->RRWS; }  // TODO: this is purely for debug purposes
 
 	sq_matrix& inverse(void);
 	//void row_reduce(void);
@@ -71,10 +72,12 @@ private:
 	void new_RRWS(void);
 
 	det_t det{};
-	sq_matrix* LU[2] = {nullptr, nullptr};
+	//sq_matrix* LU[2] = {nullptr, nullptr};
 	sq_matrix* _inverse = nullptr;
-	matrix* RRWS = nullptr;  // row reduction workspace
+	matrix<elem_t>* RRWS = nullptr;  // row reduction workspace
 };
+template class sq_matrix<f64_t>;
+template class sq_matrix<f32_t>;
 
 }
 

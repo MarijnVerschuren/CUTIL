@@ -25,7 +25,8 @@ add_compile_options(
 set(SOURCE_FILES
     ${PROJECT_SOURCE_DIR}/matrix.cpp
     ${PROJECT_SOURCE_DIR}/matrix_row_ops.asm
-    ${PROJECT_SOURCE_DIR}/matrix_REF.asm  # TODO: redo!
+    ${PROJECT_SOURCE_DIR}/matrix_REF.asm
+    ${PROJECT_SOURCE_DIR}/matrix_RREF.asm
 )
 add_library(matrix_static STATIC ${SOURCE_FILES})
 add_library(matrix_shared SHARED ${SOURCE_FILES})
