@@ -16,17 +16,17 @@ extern "C" void matrix_scale_row(f64_t* data, uint32_t m, uint32_t r, f64_t scal
 //extern "C" void matrix_copy_slice(f64_t* dst, const f64_t* src, uint32_t n, uint32_t m, uint32_t m_start, uint32_t m_end);
 
 // matrix reduce echelon form
-//extern "C" void matrix_REF(f64_t* data, uint32_t n, uint32_t m);
-void matrix_REF(double* data, uint32_t n, uint32_t m) {
-	f64_t pivot, scalar;
+extern "C" void matrix_REF(f64_t* data, uint32_t n, uint32_t m);
+void matrix_REF_C(double* data, uint32_t n, uint32_t m) {
+	f64_t pivot;
 	for (uint32_t j, i = 0; i < n; i++) {
 		for (j = i; j < n; j++) {
 			pivot = data[j * m + i];
 			if (pivot != 0.0f) { break; }
 		}
-		if (pivot == 0.0f) { break; }
+		if (pivot == 0.0f) { continue; }
 		if (i != j) { matrix_swap_rows(data, m, i, j); }
-		for (j = i + 1; j < m; j++) {
+		for (j = i + 1; j < n; j++) {
 			matrix_add_rows(data, m, j, i, -data[j * m + i]/pivot);
 		}
 	}
@@ -39,7 +39,7 @@ void matrix_RREF(double* data, uint32_t n, uint32_t m) {
 			pivot = data[j * m + i];
 			if (pivot != 0.0f) { break; }
 		}
-		if (pivot == 0.0f) { break; }
+		if (pivot == 0.0f) { continue; }
 		if (i != j) { matrix_swap_rows(data, m, i, j); }
 		for (j = 0; j < n; j++) {
 			if (j == i) {

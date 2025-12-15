@@ -39,7 +39,9 @@ public:
 
 	void init_rand(void);
 
-	void reduce(void);
+	void REF(void);
+	void REF_C(void);
+	void RREF(void);
 
 	f64_t& operator()(uint32_t i, uint32_t j);
 	void print(void) const;

@@ -48,8 +48,15 @@ void matrix::print(void) const {
 	printf("\n");
 }
 
-void matrix::reduce(void) {
+void matrix::REF(void) {
 	matrix_REF(this->data, this->n, this->m);
+}
+void matrix::REF_C(void) {
+	matrix_REF_C(this->data, this->n, this->m);
+}
+
+void matrix::RREF(void) {
+	matrix_RREF(this->data, this->n, this->m);
 }
 
 double& matrix::operator()(const uint32_t i, const uint32_t j) {

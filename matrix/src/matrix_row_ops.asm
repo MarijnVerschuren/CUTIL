@@ -32,7 +32,7 @@ matrix_swap_rows:
 	lea r8, [rsi - 32]	; r8 = 8*m - 32
 	.SIMD_loop:
 	cmp rax, r8			; i >= 8*m - 32
-	jnl .SISD_loop		; end SIMD loop if less then 256b is left
+	jnl .SISD_loop_cmp		; end SIMD loop if less then 256b is left
 	vmovupd ymm0, [rdx + rax]
 	vmovupd ymm1, [rcx + rax]
 	vmovupd [rdx + rax], ymm1
@@ -46,6 +46,7 @@ matrix_swap_rows:
     movsd   [rdx + rax], xmm1
     movsd   [rcx + rax], xmm0
 	add rax, 8
+    .SISD_loop_cmp
 	cmp rax, rsi
 	jl .SISD_loop
 	ret
@@ -76,7 +77,7 @@ matrix_add_rows:
 	lea r8, [rsi - 32]		; r8 = 8*m - 32
 	.SIMD_loop:
 	cmp rax, r8				; i >= 8*m - 32
-	jnl .SISD_loop			; end SIMD loop if less then 256b is left
+	jnl .SISD_loop_cmp			; end SIMD loop if less then 256b is left
 
 	vmovupd ymm1, [rdx + rax]
 	vmovupd ymm2, [rcx + rax]
@@ -87,14 +88,13 @@ matrix_add_rows:
 	jmp .SIMD_loop
 %endif
 	.SISD_loop:
-
     movsd xmm1, [rdx + rax]
     movsd xmm2, [rcx + rax]
     mulsd xmm2, xmm0    ; xmm2 = xmm2 * xmm0
 	addsd xmm1, xmm2    ; xmm1 += xmm2
     movsd [rdx + rax], xmm1
-
 	add rax, 8
+	.SISD_loop_cmp
 	cmp rax, rsi
 	jl .SISD_loop
 	ret
@@ -120,7 +120,7 @@ matrix_scale_row:
 	lea r8, [rsi - 32]	; r8 = 8*m - 32
 	.SIMD_loop:
 	cmp rax, r8			; i >= 8*m - 32
-	jnl .SISD_loop		; end SIMD loop if less then 256b is left
+	jnl .SISD_loop_cmp		; end SIMD loop if less then 256b is left
 	vmovupd ymm1, [rdx + rax]
 	vmulpd ymm1, ymm1, ymm0
 	vmovupd [rdx + rax], ymm1
@@ -132,6 +132,7 @@ matrix_scale_row:
     mulsd xmm1, xmm0    ; xmm1 = xmm1 * xmm0
     movsd [rdx + rax], xmm1
 	add rax, 8
+    .SISD_loop_cmp
 	cmp rax, rsi
 	jl .SISD_loop
 	ret
