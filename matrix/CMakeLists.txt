@@ -27,6 +27,7 @@ set(SOURCE_FILES
     ${PROJECT_SOURCE_DIR}/matrix_row_ops.asm
     ${PROJECT_SOURCE_DIR}/matrix_REF.asm
     ${PROJECT_SOURCE_DIR}/matrix_RREF.asm
+    ${PROJECT_SOURCE_DIR}/matrix_math.asm
 )
 add_library(matrix_static STATIC ${SOURCE_FILES})
 add_library(matrix_shared SHARED ${SOURCE_FILES})

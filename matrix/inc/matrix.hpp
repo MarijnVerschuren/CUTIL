@@ -43,14 +43,27 @@ public:
 	void RREF(void);
 
 	elem_t& operator()(uint32_t i, uint32_t j) { return this->data[i * m + j]; }
+	matrix& operator=(const matrix& rhs);
+	matrix operator+(const matrix& rhs);
+	matrix& operator+=(const matrix& rhs);
+	matrix operator-(const matrix& rhs);
+	matrix& operator-=(const matrix& rhs);
+	matrix operator*(const matrix& rhs);	// TODO
+	matrix& operator*=(const matrix& rhs);	// TODO
+
+	matrix operator*(const elem_t scalar);
+	matrix& operator*=(const elem_t scalar);
+
 	void print(void) const;
 
 private:
+	//uint8_t* null;	// bit array
 	uint32_t n, m;
 	elem_t* data;
 };
 template class matrix<f64_t>;
 template class matrix<f32_t>;
+
 
 /*!<
  * square matrix
@@ -65,7 +78,6 @@ public:
 	matrix<elem_t>& get_RRWS(void) { if (!this->RRWS) { this->new_RRWS(); } return *this->RRWS; }  // TODO: this is purely for debug purposes
 
 	sq_matrix& inverse(void);
-	//void row_reduce(void);
 
 private:
 	void LU_decomposition(void);

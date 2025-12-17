@@ -1,4 +1,7 @@
 #include "matrix.hpp"
+
+#include <stdexcept>
+
 #include "matrix_int.hpp"
 
 
@@ -46,6 +49,113 @@ template<> void matrix<f32_t>::init_rand() {
 		this->data[i] = rand_f32_t();
 	}
 }
+
+template<> matrix<f64_t>& matrix<f64_t>::operator=(const matrix<f64_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix assignment error"); }
+	if (this == &rhs) { return *this; }
+	memcpy(this->data, rhs.data, sizeof(f64_t) * this->n * this->m);
+	return *this;
+}
+template<> matrix<f32_t>& matrix<f32_t>::operator=(const matrix<f32_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix assignment error"); }
+	if (this == &rhs) { return *this; }
+	memcpy(this->data, rhs.data, sizeof(f32_t) * this->n * this->m);
+	return *this;
+}
+
+template<> matrix<f64_t> matrix<f64_t>::operator+(const matrix<f64_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix addition error"); }
+	matrix<f64_t> result(this->n, this->m);
+	matrix_add_64(result.data, this->data, rhs.data, this->n * this->m);
+	return result;
+}
+template<> matrix<f32_t> matrix<f32_t>::operator+(const matrix<f32_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix addition error"); }
+	matrix<f32_t> result(this->n, this->m);
+	matrix_add_32(result.data, this->data, rhs.data, this->n * this->m);
+	return result;
+}
+
+template<> matrix<f64_t>& matrix<f64_t>::operator+=(const matrix<f64_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix addition assignment error"); }
+	matrix_add_64(this->data, this->data, rhs.data, this->n * this->m);
+	return *this;
+}
+template<> matrix<f32_t>& matrix<f32_t>::operator+=(const matrix<f32_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix addition assignment error"); }
+	matrix_add_32(this->data, this->data, rhs.data, this->n * this->m);
+	return *this;
+}
+
+template<> matrix<f64_t> matrix<f64_t>::operator-(const matrix<f64_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix subtraction error"); }
+	matrix<f64_t> result(this->n, this->m);
+	matrix_sub_64(result.data, this->data, rhs.data, this->n * this->m);
+	return result;
+}
+template<> matrix<f32_t> matrix<f32_t>::operator-(const matrix<f32_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix subtraction error"); }
+	matrix<f32_t> result(this->n, this->m);
+	matrix_sub_32(result.data, this->data, rhs.data, this->n * this->m);
+	return result;
+}
+
+template<> matrix<f64_t>& matrix<f64_t>::operator-=(const matrix<f64_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix subtraction assignment error"); }
+	matrix_sub_64(this->data, this->data, rhs.data, this->n * this->m);
+	return *this;
+}
+template<> matrix<f32_t>& matrix<f32_t>::operator-=(const matrix<f32_t>& rhs) {
+	if (this->m != rhs.m || this->n != rhs.n) { throw std::runtime_error("matrix subtraction assignment error"); }
+	matrix_sub_32(this->data, this->data, rhs.data, this->n * this->m);
+	return *this;
+}
+
+template<> matrix<f64_t> matrix<f64_t>::operator*(const matrix<f64_t>& rhs) {
+	if (this->m != rhs.n) { throw std::runtime_error("matrix multiplication error"); }
+	// TODO
+	return *this;
+}
+template<> matrix<f32_t> matrix<f32_t>::operator*(const matrix<f32_t>& rhs) {
+	if (this->m != rhs.n) { throw std::runtime_error("matrix multiplication error"); }
+	// TODO
+	return *this;
+}
+
+template<> matrix<f64_t>& matrix<f64_t>::operator*=(const matrix<f64_t>& rhs) {
+	if (this->m != rhs.n) { throw std::runtime_error("matrix multiplication assignment error"); }
+	// TODO
+	return *this;
+}
+template<> matrix<f32_t>& matrix<f32_t>::operator*=(const matrix<f32_t>& rhs) {
+	if (this->m != rhs.n) { throw std::runtime_error("matrix multiplication assignment error"); }
+	// TODO
+	return *this;
+}
+
+
+template<> matrix<f64_t> matrix<f64_t>::operator*(const f64_t scalar) {
+	matrix<f64_t> result(this->n, this->m);
+	matrix_scale_64(result.data, this->data, scalar, this->n * this->m);
+	return result;
+}
+template<> matrix<f32_t> matrix<f32_t>::operator*(const f32_t scalar) {
+	matrix<f32_t> result(this->n, this->m);
+	matrix_scale_32(result.data, this->data, scalar, this->n * this->m);
+	return result;
+}
+
+template<> matrix<f64_t>& matrix<f64_t>::operator*=(const f64_t scalar) {
+	matrix_scale_64(this->data, this->data, scalar, this->n * this->m);
+	return *this;
+}
+template<> matrix<f32_t>& matrix<f32_t>::operator*=(const f32_t scalar) {
+	matrix_scale_32(this->data, this->data, scalar, this->n * this->m);
+	return *this;
+
+}
+
+
 
 template<typename elem_t>
 void matrix<elem_t>::print(void) const {

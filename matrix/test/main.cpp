@@ -47,8 +47,14 @@ void test(void) {
 	mat.RREF();
 	end = std::chrono::steady_clock::now();
 	//mat.print();
-
 	printf("RREF:   %ld us\n", std::chrono::duration_cast<std::chrono::microseconds> (end - start).count());
+
+	mat.init_rand();
+	start = std::chrono::steady_clock::now();
+	mat *= 1.23456789;
+	end = std::chrono::steady_clock::now();
+
+	printf("mul assign:   %ld us\n", std::chrono::duration_cast<std::chrono::microseconds> (end - start).count());
 
 	srand(1);
 	MAT::sq_matrix<f32_t> mat32(1000);
@@ -65,11 +71,40 @@ void test(void) {
 
 }
 
+
+void test_math(void) {
+	srand(1);
+	MAT::sq_matrix<f64_t> mat_a(8);
+	MAT::sq_matrix<f64_t> mat_b(8);
+	mat_a.init_rand();
+	mat_b.init_rand();
+
+	mat_a.print();
+	mat_b.print();
+	auto mat_a_add_b = mat_a + mat_b;
+	auto mat_a_sub_b = mat_a - mat_b;
+	mat_a_add_b.print();
+	mat_a_sub_b.print();
+
+
+	mat_a -= mat_b;
+	mat_a.print();
+	mat_a += mat_a;
+	mat_a.print();
+
+	mat_b *= 5;
+	mat_b.print();
+	mat_b -= mat_a * 8;
+	mat_b.print();
+}
+
+
 int main(void) {
-	test3x3();
+	//test3x3();
+	test_math();
 	test();
 
-	f16_t s = 1.3;
+//	f16_t s = 1.3;
 
 	return 0;
 }
