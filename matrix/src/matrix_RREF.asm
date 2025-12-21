@@ -15,13 +15,13 @@ global matrix_RREF_32
 ;
 ; arguments:
 ;   rdi -> pointer to matrix data (double*)
-;   rsi -> n (number of rows)
-;   rdx -> m (number of columns)   [converted to bytes: m*8]
+;   rsi -> m (number of rows)
+;   rdx -> n (number of columns)   [converted to bytes: n*8]
 ;
 ; registers:
 ;   rax  -> j (row iterator / inner index)
 ;   rcx  -> destination row pointer / offset
-;   r8   -> (8*m - 32) AVX256 loop bound
+;   r8   -> (8*n - 32) AVX256 loop bound
 ;   r9   -> i (pivot row / column index)
 ;   r10  -> row pointer / row offset (varies by loop)
 ;   r11  -> row index for elimination (i2)
@@ -37,20 +37,20 @@ global matrix_RREF_32
 ;
 ; ============================================================
 matrix_RREF_64:
-    shl rdx, 3                  ; rdx = m * 8 (bytes per row)
+    shl rdx, 3                  ; rdx = n * 8 (bytes per row)
 
 %ifdef AVX256
-    lea r8, [rdx - 32]           ; r8 = 8*m - 32 (last full YMM chunk)
+    lea r8, [rdx - 32]           ; r8 = 8*n - 32 (last full YMM chunk)
 %endif
 
     xor r9, r9                  ; i = 0
 
-.REF_loop:                      ; for (i = 0; i < n; i++)
+.REF_loop:                      ; for (i = 0; i < m; i++)
     xorps xmm1, xmm1            ; xmm1 = 0.0 (used for zero compare)
 
     mov rax, r9                 ; j = i
-    mov r10, rdx                ; r10 = 8*m
-    imul r10, r9                ; r10 = i * 8*m
+    mov r10, rdx                ; r10 = 8*n
+    imul r10, r9                ; r10 = i * 8*n
     add r10, rdi                ; r10 = &matrix[i][0]
 
 .pivot_loop:                    ; search pivot in column i
@@ -61,7 +61,7 @@ matrix_RREF_64:
     add r10, rdx                ; advance to next row
     inc rax                     ; j++
     cmp rax, rsi
-    jl .pivot_loop              ; continue if j < n
+    jl .pivot_loop              ; continue if j < m
     jmp .REF_loop_continue      ; no pivot found in this column
 
 .pivot_end:
@@ -74,8 +74,8 @@ matrix_RREF_64:
 ; row swap: swap row i with row j
 ; --------------------------------------------------------
     xor rax, rax
-    mov rcx, rdx                ; rcx = 8*m
-    imul rcx, r9                ; rcx = i * 8*m
+    mov rcx, rdx                ; rcx = 8*n
+    imul rcx, r9                ; rcx = i * 8*n
     add rcx, rdi                ; rcx = &matrix[i][0]
 
 %ifdef AVX256
@@ -206,13 +206,13 @@ matrix_RREF_64:
 ;
 ; arguments:
 ;   rdi -> pointer to matrix data (double*)
-;   rsi -> n (number of rows)
-;   rdx -> m (number of columns)   [converted to bytes: m*4]
+;   rsi -> m (number of rows)
+;   rdx -> n (number of columns)   [converted to bytes: n*4]
 ;
 ; registers:
 ;   rax  -> j (row iterator / inner index)
 ;   rcx  -> destination row pointer / offset
-;   r8   -> (4*m - 32) AVX256 loop bound
+;   r8   -> (4*n - 32) AVX256 loop bound
 ;   r9   -> i (pivot row / column index)
 ;   r10  -> row pointer / row offset (varies by loop)
 ;   r11  -> row index for elimination (i2)
@@ -228,20 +228,20 @@ matrix_RREF_64:
 ;
 ; ============================================================
 matrix_RREF_32:
-    shl rdx, 2                  ; rdx = m * 4 (bytes per row)
+    shl rdx, 2                  ; rdx = n * 4 (bytes per row)
 
 %ifdef AVX256
-    lea r8, [rdx - 32]           ; r8 = 4*m - 32 (last full YMM chunk)
+    lea r8, [rdx - 32]           ; r8 = 4*n - 32 (last full YMM chunk)
 %endif
 
     xor r9, r9                  ; i = 0
 
-.REF_loop:                      ; for (i = 0; i < n; i++)
+.REF_loop:                      ; for (i = 0; i < m; i++)
     xorps xmm1, xmm1            ; xmm1 = 0.0 (used for zero compare)
 
     mov rax, r9                 ; j = i
-    mov r10, rdx                ; r10 = 4*m
-    imul r10, r9                ; r10 = i * 4*m
+    mov r10, rdx                ; r10 = 4*n
+    imul r10, r9                ; r10 = i * 4*n
     add r10, rdi                ; r10 = &matrix[i][0]
 
 .pivot_loop:                    ; search pivot in column i
@@ -252,7 +252,7 @@ matrix_RREF_32:
     add r10, rdx                ; advance to next row
     inc rax                     ; j++
     cmp rax, rsi
-    jl .pivot_loop              ; continue if j < n
+    jl .pivot_loop              ; continue if j < m
     jmp .REF_loop_continue      ; no pivot found in this column
 
 .pivot_end:
@@ -265,8 +265,8 @@ matrix_RREF_32:
 ; row swap: swap row i with row j
 ; --------------------------------------------------------
     xor rax, rax
-    mov rcx, rdx                ; rcx = 8*m
-    imul rcx, r9                ; rcx = i * 8*m
+    mov rcx, rdx                ; rcx = 8*n
+    imul rcx, r9                ; rcx = i * 8*n
     add rcx, rdi                ; rcx = &matrix[i][0]
 
 %ifdef AVX256

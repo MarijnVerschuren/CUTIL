@@ -51,7 +51,7 @@ matrix_add_64:
     movsd [rdi + rax], xmm0
 
 	add rax, 8
-	.SISD_loop_cmp
+	.SISD_loop_cmp:
 	cmp rax, rcx
 	jl .SISD_loop
 	ret
@@ -82,7 +82,7 @@ matrix_add_32:
     movss [rdi + rax], xmm0
 
 	add rax, 8
-	.SISD_loop_cmp
+	.SISD_loop_cmp:
 	cmp rax, rcx
 	jl .SISD_loop
 	ret
@@ -113,7 +113,7 @@ matrix_sub_64:
     movsd [rdi + rax], xmm0
 
 	add rax, 8
-	.SISD_loop_cmp
+	.SISD_loop_cmp:
 	cmp rax, rcx
 	jl .SISD_loop
 	ret
@@ -144,7 +144,7 @@ matrix_sub_32:
     movss [rdi + rax], xmm0
 
 	add rax, 8
-	.SISD_loop_cmp
+	.SISD_loop_cmp:
 	cmp rax, rcx
 	jl .SISD_loop
 	ret
@@ -189,7 +189,7 @@ matrix_scale_64:
     movsd [rdi + rax], xmm1
 
 	add rax, 8
-	.SISD_loop_cmp
+	.SISD_loop_cmp:
 	cmp rax, rdx
 	jl .SISD_loop
 	ret
@@ -219,7 +219,33 @@ matrix_scale_32:
     movss [rdi + rax], xmm1
 
 	add rax, 4
-	.SISD_loop_cmp
+	.SISD_loop_cmp:
 	cmp rax, rdx
 	jl .SISD_loop
 	ret
+
+
+
+; ============================================================
+; matrix_multiply_64/32
+;
+; arguments:
+;   rdi		->	C
+;   rsi		->	A
+;   rdx		->	B
+;	rcx		->	n
+;	r8		->	m
+;	r9		->	p
+;
+; vars:
+;	rax		->	i
+;	r10		->	j
+;	r11		->	k
+;
+; stacked vars:
+;	r12		->	ii
+;	r13		->	jj
+;	r14		->	kk
+;	r15		->	8*remaining - 32
+; ============================================================
+; TODO:

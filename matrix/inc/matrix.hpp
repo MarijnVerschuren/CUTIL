@@ -7,92 +7,196 @@
 #include <stdlib.h>
 
 #include "types.h"
+#include "matrix_int.hpp"
+
+
+
+template<typename T>
+concept tf32 = std::is_same_v<T, f32_t>;
+template<typename T>
+concept tf64 = std::is_same_v<T, f64_t>;
+
+#define RAND() ((rand() % 1000) / 1000.0)
+
+
 
 
 namespace MAT {
+	/*!<
+	 * matrix
+	 * */
+	template<class elem_t, u32_t m, u32_t n>
+	class matrix {
+	template <class, u32_t> friend class sq_matrix;
+	template <class, u32_t, u32_t> friend class matrix;
+	template <class> friend class complex;
+	public:
+		// TODO: copy constructor: matrix(const matrix&) = default;
+		matrix();
+		~matrix(void) { free(this->data); }
 
+		void init_rand(void);
 
-/*!<
- * Property classes
- * */
-class det_t {
-public:
-	det_t() = default;
-	operator f64_t() const { return this->_det; }
-	// TODO make framework with which redundant calculations can be avoided (feed values)
-	f64_t& operator =(f64_t val);
-private:
-	f64_t _det;
-};
+		void REF(void);
+		void RREF(void);
 
+		elem_t& operator()(uint32_t i, uint32_t j) { return this->data[i * m + j]; }
+		matrix& operator=(const matrix& rhs);
+		matrix operator+(const matrix& rhs) const;
+		matrix& operator+=(const matrix& rhs);
+		matrix operator-(const matrix& rhs) const;
+		matrix& operator-=(const matrix& rhs);
+		matrix operator*(const elem_t scalar) const;	// scale
+		matrix& operator*=(const elem_t scalar);		// scale
 
-/*!<
- * matrix
- * */
-template<typename elem_t>
-class matrix {
-template <typename> friend class sq_matrix;
-public:
-	// TODO: copy constructor: matrix(const matrix&) = default;
-	matrix(uint32_t n, uint32_t m);
-	~matrix(void) { free(this->data); }
+		template<u32_t p>
+		matrix<elem_t, m, p> operator*(const matrix<elem_t, n, p>& rhs) const;
 
-	void init_rand(void);
+		void print(void) const;
 
-	void REF(void);
-	void RREF(void);
-
-	elem_t& operator()(uint32_t i, uint32_t j) { return this->data[i * m + j]; }
-	matrix& operator=(const matrix& rhs);
-	matrix operator+(const matrix& rhs);
-	matrix& operator+=(const matrix& rhs);
-	matrix operator-(const matrix& rhs);
-	matrix& operator-=(const matrix& rhs);
-	matrix operator*(const matrix& rhs);	// TODO
-	matrix& operator*=(const matrix& rhs);	// TODO
-
-	matrix operator*(const elem_t scalar);
-	matrix& operator*=(const elem_t scalar);
-
-	void print(void) const;
-
-private:
-	//uint8_t* null;	// bit array
-	uint32_t n, m;
-	elem_t* data;
-};
-template class matrix<f64_t>;
-template class matrix<f32_t>;
-
-
-/*!<
- * square matrix
- * */
-template<typename elem_t>
-class sq_matrix : public matrix<elem_t> {
-public:
-	sq_matrix(const uint32_t dim) : matrix<elem_t>(dim, dim) {};
-
-	//sq_matrix& L_matrix(void);
-	//sq_matrix& U_matrix(void);
-	matrix<elem_t>& get_RRWS(void) { if (!this->RRWS) { this->new_RRWS(); } return *this->RRWS; }  // TODO: this is purely for debug purposes
-
-	sq_matrix& inverse(void);
-
-private:
-	void LU_decomposition(void);
-	void new_RRWS(void);
-
-	det_t det{};
-	//sq_matrix* LU[2] = {nullptr, nullptr};
-	sq_matrix* _inverse = nullptr;
-	matrix<elem_t>* RRWS = nullptr;  // row reduction workspace
-};
-template class sq_matrix<f64_t>;
-template class sq_matrix<f32_t>;
-
+	private:
+		//uint8_t* null;	// bit array
+		elem_t* data;
+	};
 }
 
+
+
+namespace MAT {
+	/*!<
+	 * matrix
+	 * */
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n>::matrix() {
+		this->data = (elem_t*)malloc(sizeof(elem_t) * n * m);
+	}
+
+
+	template<class elem_t, u32_t m, u32_t n>
+	void matrix<elem_t, m, n>::init_rand() {
+		for (uint32_t i = 0; i < (n * m); i++) {
+			this->data[i] = RAND();
+		}
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n>& matrix<elem_t, m, n>::operator=(const matrix<elem_t, m, n>& rhs) {
+		if (this == &rhs) { return *this; }
+		memcpy(this->data, rhs.data, sizeof(elem_t) * n * m);
+		return *this;
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n> matrix<elem_t, m, n>::operator+(const matrix<elem_t, m, n>& rhs) const {
+		matrix<elem_t, m, n> result;
+		if constexpr (tf32<elem_t>)			{ matrix_add_32(result.data, this->data, rhs.data, n * m); }
+		else if constexpr (tf64<elem_t>)	{ matrix_add_64(result.data, this->data, rhs.data, n * m); }
+		else {
+			// TODO: C algo!
+		}
+		return result;
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n>& matrix<elem_t, m, n>::operator+=(const matrix<elem_t, m, n>& rhs) {
+		if constexpr (tf32<elem_t>)			{ matrix_add_32(this->data, this->data, rhs.data, n * m); }
+		else if constexpr (tf64<elem_t>)	{ matrix_add_64(this->data, this->data, rhs.data, n * m); }
+		else {
+			// TODO: C algo!
+		}
+		return *this;
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n> matrix<elem_t, m, n>::operator-(const matrix<elem_t, m, n>& rhs) const {
+		matrix<elem_t, m, n> result;
+		if constexpr (tf32<elem_t>)			{ matrix_sub_32(result.data, this->data, rhs.data, n * m); }
+		else if constexpr (tf64<elem_t>)	{ matrix_sub_64(result.data, this->data, rhs.data, n * m); }
+		else {
+			// TODO: C algo!
+		}
+		return result;
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n>& matrix<elem_t, m, n>::operator-=(const matrix<elem_t, m, n>& rhs) {
+		if constexpr (tf32<elem_t>)			{ matrix_sub_32(this->data, this->data, rhs.data, n * m); }
+		else if constexpr (tf64<elem_t>)	{ matrix_sub_64(this->data, this->data, rhs.data, n * m); }
+		else {
+			// TODO: C algo!
+		}
+		return *this;
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	template<u32_t p>
+	matrix<elem_t, m, p> matrix<elem_t, m, n>::operator*(const matrix<elem_t, n, p>& rhs) const {
+	    matrix<elem_t, m, p> result;
+
+		// TODO: improved LASER method
+		// TODO: alman williams matrix multiplication!!!
+		if constexpr (tf32<elem_t>)			{ matrix_mul_32(result.data, this->data, rhs.data, m, n, p); }
+		else if constexpr (tf64<elem_t>)	{ matrix_mul_64(result.data, this->data, rhs.data, m, n, p); }
+		else {
+			// TODO: general algo!
+		}
+
+	    return result;
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n> matrix<elem_t, m, n>::operator*(const elem_t scalar) const {
+		matrix<elem_t, m, n> result;
+		if constexpr (tf32<elem_t>)			{ matrix_scale_32(result.data, this->data, scalar, n * m); }
+		else if constexpr (tf64<elem_t>)	{ matrix_scale_64(result.data, this->data, scalar, n * m); }
+		else {
+			// TODO: C algo!
+		}
+		return result;
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n>& matrix<elem_t, m, n>::operator*=(const elem_t scalar) {
+		if constexpr (tf32<elem_t>)			{ matrix_scale_32(this->data, this->data, scalar, n * m); }
+		else if constexpr (tf64<elem_t>)	{ matrix_scale_64(this->data, this->data, scalar, n * m); }
+		else {
+			// TODO: C algo!
+		}
+		return *this;
+	}
+
+
+	template<class elem_t, u32_t m, u32_t n>
+	void matrix<elem_t, m, n>::print(void) const {
+		for (uint32_t i = 0; i < m; i++) {
+			printf("[");
+			for (uint32_t j = 0; j < n; j++) {
+				printf("%5.2f ", this->data[i * n + j]);
+			}
+			printf("]\n");
+		}
+		printf("\n");
+	}
+
+
+	template<class elem_t, u32_t m, u32_t n>
+	void matrix<elem_t, m, n>::REF(void) {
+		if constexpr (tf32<elem_t>)			{ matrix_REF_32(this->data, m, n); }
+		else if constexpr (tf64<elem_t>)	{ matrix_REF_64(this->data, m, n); }
+		else {
+			// TODO: C algo!
+		}
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	void matrix<elem_t, m, n>::RREF(void) {
+		if constexpr (tf32<elem_t>)			{ matrix_RREF_32(this->data, m, n); }
+		else if constexpr (tf64<elem_t>)	{ matrix_RREF_64(this->data, m, n); }
+		else {
+			// TODO: C algo!
+		}
+	}
+}
 
 
 #endif //MATRIX_LIBRARY_H

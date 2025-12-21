@@ -16,18 +16,18 @@ set(PROJECT_SOURCE_DIR "src")
 set(PROJECT_INCLUDE_DIR "inc")
 set(PROJECT_TEST_DIR "test")
 
-set(CMAKE_CXX_FLAGS "-flto")
+set(CMAKE_CXX_FLAGS "-flto -funroll-loops -ffast-math -mavx -mavx2 -mfma -O3")
 add_compile_options(
     -DAVX256
     -g
 )
 
 set(SOURCE_FILES
-    ${PROJECT_SOURCE_DIR}/matrix.cpp
     ${PROJECT_SOURCE_DIR}/matrix_row_ops.asm
     ${PROJECT_SOURCE_DIR}/matrix_REF.asm
     ${PROJECT_SOURCE_DIR}/matrix_RREF.asm
     ${PROJECT_SOURCE_DIR}/matrix_math.asm
+    ${PROJECT_SOURCE_DIR}/matrix_math.cpp
 )
 add_library(matrix_static STATIC ${SOURCE_FILES})
 add_library(matrix_shared SHARED ${SOURCE_FILES})
