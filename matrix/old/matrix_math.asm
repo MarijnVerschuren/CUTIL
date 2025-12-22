@@ -13,6 +13,18 @@ global matrix_scale_64
 global matrix_scale_32
 
 
+;/*!
+; * matrix_math.asm
+; */
+;extern "C" void matrix_add_64(f64_t* dst, f64_t* a, f64_t* b, u32_t cnt);
+;extern "C" void matrix_add_32(f32_t* dst, f32_t* a, f32_t* b, u32_t cnt);
+;extern "C" void matrix_sub_64(f64_t* dst, f64_t* a, f64_t* b, u32_t cnt);
+;extern "C" void matrix_sub_32(f32_t* dst, f32_t* a, f32_t* b, u32_t cnt);
+;extern "C" void matrix_scale_64(f64_t* dst, f64_t* src, f64_t scalar, u32_t cnt);
+;extern "C" void matrix_scale_32(f32_t* dst, f32_t* src, f32_t scalar, u32_t cnt);
+
+
+
 ; ============================================================
 ; matrix_add/sub_64/32
 ;

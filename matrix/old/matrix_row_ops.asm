@@ -10,6 +10,14 @@ global matrix_add_rows
 global matrix_scale_row
 
 
+;/*!
+; * matrix_row_ops.asm
+; */
+;extern "C" void matrix_swap_rows(f64_t* data, u32_t m, u32_t d, u32_t s);
+;extern "C" void matrix_add_rows(f64_t* data, u32_t m, u32_t d, u32_t s, f64_t scalar);
+;extern "C" void matrix_scale_row(f64_t* data, u32_t m, u32_t r, f64_t scalar);
+
+
 ; args:
 ;	rdi		->	data
 ;	rsi		->	m		-> 8 * m

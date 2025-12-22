@@ -13,16 +13,15 @@
 #define BK 64
 
 
-// TODO:
-// extern "C" void matrix_add_64(f64_t* dst, f64_t* a, f64_t* b, u32_t cnt);
-// extern "C" void matrix_add_32(f32_t* dst, f32_t* a, f32_t* b, u32_t cnt);
-// extern "C" void matrix_sub_64(f64_t* dst, f64_t* a, f64_t* b, u32_t cnt);
-// extern "C" void matrix_sub_32(f32_t* dst, f32_t* a, f32_t* b, u32_t cnt);
-// extern "C" void matrix_scale_64(f64_t* dst, f64_t* src, f64_t scalar, u32_t cnt);
-// extern "C" void matrix_scale_32(f32_t* dst, f32_t* src, f32_t scalar, u32_t cnt);
+/*!
+ * matrix_math.cpp
+ */
+void matrix_mul_64(f64_t* C, f64_t* A, f64_t* B, u32_t m, u32_t n, u32_t p);	// C = A*B (A[mXn], b[nXp])
+void matrix_mul_32(f32_t* C, const f32_t* A, f32_t* B, u32_t m, u32_t n, u32_t p);	// C = A*B (A[mXn], b[nXp])
 
 
-// TODO: inline into method???
+
+
 void matrix_mul_64(f64_t* C, const f64_t* A, const f64_t* B, u32_t m, u32_t n, u32_t p) {
     u32_t i, j, k, ii, jj, kk;
 

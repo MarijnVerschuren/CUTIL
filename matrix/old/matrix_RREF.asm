@@ -9,6 +9,11 @@ global matrix_RREF_64
 global matrix_RREF_32
 
 
+;/*!
+; * matrix_RREF.asm
+; */
+;extern "C" void matrix_RREF_64(f64_t* data, u32_t m, u32_t n);
+;extern "C" void matrix_RREF_32(f32_t* data, u32_t m, u32_t n);
 
 ; ============================================================
 ; matrix_RREF_64

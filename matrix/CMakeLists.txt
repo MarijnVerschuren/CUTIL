@@ -23,17 +23,13 @@ add_compile_options(
 )
 
 set(SOURCE_FILES
-    ${PROJECT_SOURCE_DIR}/matrix_row_ops.asm
-    ${PROJECT_SOURCE_DIR}/matrix_REF.asm
-    ${PROJECT_SOURCE_DIR}/matrix_RREF.asm
-    ${PROJECT_SOURCE_DIR}/matrix_math.asm
-    ${PROJECT_SOURCE_DIR}/matrix_math.cpp
 )
-add_library(matrix_static STATIC ${SOURCE_FILES})
-add_library(matrix_shared SHARED ${SOURCE_FILES})
+
+#add_library(matrix_static STATIC ${SOURCE_FILES})
+#add_library(matrix_shared SHARED ${SOURCE_FILES})
 
 add_executable(matrix_cpp_static_test ${PROJECT_TEST_DIR}/main.cpp)
 add_executable(matrix_cpp_shared_test ${PROJECT_TEST_DIR}/main.cpp)
 
-target_link_libraries(matrix_cpp_static_test PRIVATE matrix_static)
-target_link_libraries(matrix_cpp_shared_test PRIVATE matrix_shared)
+#target_link_libraries(matrix_cpp_static_test PRIVATE matrix_static)
+#target_link_libraries(matrix_cpp_shared_test PRIVATE matrix_shared)

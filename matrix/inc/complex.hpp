@@ -4,16 +4,16 @@
 
 #ifndef COMPLEX_HPP
 #define COMPLEX_HPP
-#include "matrix.hpp"
+#include "sq_matrix.hpp"
 
 
 
 namespace MAT {
 	template<class elem_t>
-	class complex: public matrix<elem_t, 2, 2> {
+	class complex {
 	public:
-		complex() : matrix<elem_t, 2, 2>() {}
-		complex(elem_t a, elem_t b);
+		complex(void) = default;
+		complex(elem_t real, elem_t imag);
 
 		complex& operator=(const complex& rhs);
 		complex operator+(const complex& rhs) const;
@@ -25,24 +25,29 @@ namespace MAT {
 		complex operator*(const complex& rhs) const;
 		complex& operator*=(const complex& rhs);
 
-		void print() const;
+		sq_matrix<elem_t, 2> mat(void) const;
+
+		void print(void) const;
+	private:
+		elem_t real;
+		elem_t imag;
 	};
 }
 
 
 
 
-#include <immintrin.h>
 namespace MAT {
 	template<class elem_t>
-	complex<elem_t>::complex(elem_t a, elem_t b) : matrix<elem_t, 2, 2>() {
-		this->data[0] =		this->data[3] = a;
-		this->data[1] = -b;	this->data[2] = b;
+	complex<elem_t>::complex(elem_t real, elem_t imag) {
+		this->real = real;
+		this->imag = imag;
 	}
 
 	template<class elem_t>
 	complex<elem_t>& complex<elem_t>::operator=(const complex<elem_t>& rhs) {
-		memcpy(this->data, rhs.data, 2 * sizeof(elem_t));
+		this->real = rhs.real;
+		this->imag = rhs.imag;
 		return *this;
 	}
 
@@ -50,16 +55,14 @@ namespace MAT {
 	complex<elem_t> complex<elem_t>::operator+(const complex& rhs) const {
 		complex<elem_t> result;
 		if constexpr (tf32<elem_t>) {
-			v128s_t A = _mm_loadu_ps(this->data);
-			const v128s_t B = _mm_loadu_ps(rhs.data);
-			A = _mm_add_ps(A, B);	// A += B
-			_mm_storeu_ps(result.data, A);
+			result.real = this->real + rhs.real;
+			result.imag = this->imag + rhs.imag;
 		}
 		else if constexpr (tf64<elem_t>) {
-			v256d_t A = _mm256_loadu_pd(this->data);
-			const v256d_t B = _mm256_loadu_pd(rhs.data);
-			A = _mm256_add_pd(A, B);	// A += B
-			_mm256_storeu_pd(result.data, A);
+			v128d_t A = _mm_loadu_pd(&this->real);
+			const v128d_t B = _mm_loadu_pd(&rhs.real);
+			A = _mm_add_pd(A, B);	// A += B
+			_mm_storeu_pd(&result.real, A);
 		}
 		else {
 			// TODO
@@ -70,16 +73,14 @@ namespace MAT {
 	template<class elem_t>
 	complex<elem_t>& complex<elem_t>::operator+=(const complex& rhs) {
 		if constexpr (tf32<elem_t>) {
-			v128s_t A = _mm_loadu_ps(this->data);
-			const v128s_t B = _mm_loadu_ps(rhs.data);
-			A = _mm_add_ps(A, B);	// A += B
-			_mm_storeu_ps(this->data, A);
+			this->real += rhs.real;
+			this->imag += rhs.imag;
 		}
 		else if constexpr (tf64<elem_t>) {
-			v256d_t A = _mm256_loadu_pd(this->data);
-			const v256d_t B = _mm256_loadu_pd(rhs.data);
-			A = _mm256_add_pd(A, B);	// A += B
-			_mm256_storeu_pd(this->data, A);
+			v128d_t A = _mm_loadu_pd(&this->real);
+			const v128d_t B = _mm_loadu_pd(&rhs.real);
+			A = _mm_add_pd(A, B);	// A += B
+			_mm_storeu_pd(&this->real, A);
 		}
 		else {
 			// TODO
@@ -91,16 +92,14 @@ namespace MAT {
 	complex<elem_t> complex<elem_t>::operator-(const complex& rhs) const {
 		complex<elem_t> result;
 		if constexpr (tf32<elem_t>) {
-			v128s_t A = _mm_loadu_ps(this->data);
-			const v128s_t B = _mm_loadu_ps(rhs.data);
-			A = _mm_sub_ps(A, B);	// A += B
-			_mm_storeu_ps(result.data, A);
+			result.real = this->real - rhs.real;
+			result.imag = this->imag - rhs.imag;
 		}
 		else if constexpr (tf64<elem_t>) {
-			v256d_t A = _mm256_loadu_pd(this->data);
-			const v256d_t B = _mm256_loadu_pd(rhs.data);
-			A = _mm256_sub_pd(A, B);	// A += B
-			_mm256_storeu_pd(result.data, A);
+			v128d_t A = _mm_loadu_pd(&this->real);
+			const v128d_t B = _mm_loadu_pd(&rhs.real);
+			A = _mm_sub_pd(A, B);	// A -= B
+			_mm_storeu_pd(&result.real, A);
 		}
 		else {
 			// TODO
@@ -111,16 +110,14 @@ namespace MAT {
 	template<class elem_t>
 	complex<elem_t>& complex<elem_t>::operator-=(const complex& rhs) {
 		if constexpr (tf32<elem_t>) {
-			v128s_t A = _mm_loadu_ps(this->data);
-			const v128s_t B = _mm_loadu_ps(rhs.data);
-			A = _mm_add_ps(A, B);	// A += B
-			_mm_storeu_ps(this->data, A);
+			this->real -= rhs.real;
+			this->imag -= rhs.imag;
 		}
 		else if constexpr (tf64<elem_t>) {
-			v256d_t A = _mm256_loadu_pd(this->data);
-			const v256d_t B = _mm256_loadu_pd(rhs.data);
-			A = _mm256_add_pd(A, B);	// A += B
-			_mm256_storeu_pd(this->data, A);
+			v128d_t A = _mm_loadu_pd(&this->real);
+			const v128d_t B = _mm_loadu_pd(&rhs.real);
+			A = _mm_sub_pd(A, B);	// A -= B
+			_mm_storeu_pd(&this->real, A);
 		}
 		else {
 			// TODO
@@ -132,16 +129,14 @@ namespace MAT {
 	complex<elem_t> complex<elem_t>::operator*(const elem_t scalar) const {
 		complex<elem_t> result;
 		if constexpr (tf32<elem_t>) {
-			const v128s_t B = _mm_broadcast_ss(&scalar);	// B = [scalar, ..., scalar]
-			v128s_t A = _mm_loadu_ps(this->data);
-			A = _mm_mul_ps(A, B);	// A *= B
-			_mm_storeu_ps(result.data, A);
+			result.real = this->real * scalar;
+			result.imag = this->imag * scalar;
 		}
 		else if constexpr (tf64<elem_t>) {
-			const v256d_t B = _mm256_broadcast_sd(&scalar);	// B = [scalar, ..., scalar]
-			v256d_t A = _mm256_loadu_pd(this->data);
-			A = _mm256_mul_pd(A, B);	// A *= B
-			_mm256_storeu_pd(result.data, A);
+			const v128d_t B = _mm_set_pd(scalar, scalar);	// B = [scalar, scalar]
+			v128d_t A = _mm_loadu_pd(&this->real);
+			A = _mm_mul_pd(A, B);	// A *= B
+			_mm_storeu_pd(&result.real, A);
 		}
 		else {
 			// TODO
@@ -152,16 +147,14 @@ namespace MAT {
 	template<class elem_t>
 	complex<elem_t>& complex<elem_t>::operator*=(const elem_t scalar) {
 		if constexpr (tf32<elem_t>) {
-			const v128s_t B = _mm_broadcast_ss(&scalar);	// B = [scalar, ..., scalar]
-			v128s_t A = _mm_loadu_ps(this->data);
-			A = _mm_mul_ps(A, B);	// A *= B
-			_mm_storeu_ps(this->data, A);
+			this->real *= scalar;
+			this->imag *= scalar;
 		}
 		else if constexpr (tf64<elem_t>) {
-			const v256d_t B = _mm256_broadcast_sd(&scalar);	// B = [scalar, ..., scalar]
-			v256d_t A = _mm256_loadu_pd(this->data);
-			A = _mm256_mul_pd(A, B);	// A *= B
-			_mm256_storeu_pd(this->data, A);
+			const v128d_t B = _mm_set_pd(scalar, scalar);	// B = [scalar, scalar]
+			v128d_t A = _mm_loadu_pd(&this->real);
+			A = _mm_mul_pd(A, B);	// A *= B
+			_mm_storeu_pd(&this->real, A);
 		}
 		else {
 			// TODO
@@ -173,18 +166,40 @@ namespace MAT {
 	complex<elem_t> complex<elem_t>::operator*(const complex& rhs) const {
 		complex<elem_t> result;
 		if constexpr (tf32<elem_t>) {
-			// v128s_t A = _mm_set_ps(this->data[2],	this->data[3]);		// [b, a]
-			// v128s_t B = _mm_set_ps(rhs.data[2],		rhs.data[3]);		// [d, c]
-			// // A * B = (ac - bd) + i(ad + bc)
-			// // [(ac - bd), -(ad + bc)]
-			// // [(ad + bc),  (ac - bd)]
+			v128s_t A =		_mm_set_ps(0.0f, 0.0f, this->imag,	this->real);		// [0, 0, imag (b), real (a)]
+			v128s_t B =		_mm_set_ps(0.0f, 0.0f, rhs.imag,	rhs.real);		// [0, 0, imag (d), real (c)]
+			v128s_t M1 =	_mm_mul_ps(A, B);		// [bd, ac]
+			v128s_t M2 =	_mm_shuffle_ps(B, B, _MM_SHUFFLE(2,3,0,1));
+			M2 =			_mm_mul_ps(A, M2);	// [bc, ad]
+			M1 = _mm_sub_ss(	// ac - bd
+				M1,
+				_mm_shuffle_ps(M1, M1, _MM_SHUFFLE(2,3,0,1))
+			);
+			M2 = _mm_add_ss(	// ad + bc
+				M2,
+				_mm_shuffle_ps(M2, M2, _MM_SHUFFLE(2,3,0,1))
+			);
 
-			// v128s_t bd_ac = _mm_mul_ps(A, B);		// [bd, ac]
-			// B = _mm_shuffle_ps(B, B, 1);	// B = [c, d]
-			// v128s_t bc_ad = _mm_mul_ps(A, B);		// [bc, ad]
+			result.real = _mm_cvtss_f32(M1);
+			result.imag = _mm_cvtss_f32(M2);
 		}
 		else if constexpr (tf64<elem_t>) {
-			// TODO
+			v128d_t A =		_mm_set_pd(this->imag,	this->real);	// [imag (b), real (a)]
+			v128d_t B =		_mm_set_pd(rhs.imag,		rhs.real);	// [imag (d), real (c)]
+			v128d_t M1 =	_mm_mul_pd(A, B);		// [bd, ac]
+			v128d_t M2 =	_mm_shuffle_pd(B, B, 1);
+			M2 =			_mm_mul_pd(A, M2);	// [bc, ad]
+			M1 = _mm_sub_sd(	// ac - bd
+				M1,
+				_mm_shuffle_pd(M1, M1, 1)
+			);
+			M2 = _mm_add_sd(	// ad + bc
+				M2,
+				_mm_shuffle_pd(M2, M2, 1)
+			);
+
+			result.real = _mm_cvtsd_f64(M1);
+			result.imag = _mm_cvtsd_f64(M2);
 		}
 		else {
 			// TODO
@@ -194,16 +209,63 @@ namespace MAT {
 
 	template<class elem_t>
 	complex<elem_t>& complex<elem_t>::operator*=(const complex& rhs) {
-		// TODO
+				if constexpr (tf32<elem_t>) {
+			v128s_t A =		_mm_set_ps(0.0f, 0.0f, this->imag,	this->real);		// [0, 0, imag (b), real (a)]
+			v128s_t B =		_mm_set_ps(0.0f, 0.0f, rhs.imag,	rhs.real);		// [0, 0, imag (d), real (c)]
+			v128s_t M1 =	_mm_mul_ps(A, B);		// [bd, ac]
+			v128s_t M2 =	_mm_shuffle_ps(B, B, _MM_SHUFFLE(2,3,0,1));
+			M2 =			_mm_mul_ps(A, M2);	// [bc, ad]
+			M1 = _mm_sub_ss(	// ac - bd
+				M1,
+				_mm_shuffle_ps(M1, M1, _MM_SHUFFLE(2,3,0,1))
+			);
+			M2 = _mm_add_ss(	// ad + bc
+				M2,
+				_mm_shuffle_ps(M2, M2, _MM_SHUFFLE(2,3,0,1))
+			);
+
+			this->real = _mm_cvtss_f32(M1);
+			this->imag = _mm_cvtss_f32(M2);
+		}
+		else if constexpr (tf64<elem_t>) {
+			v128d_t A =		_mm_set_pd(this->imag,	this->real);	// [imag (b), real (a)]
+			v128d_t B =		_mm_set_pd(rhs.imag,		rhs.real);	// [imag (d), real (c)]
+			v128d_t M1 =	_mm_mul_pd(A, B);		// [bd, ac]
+			v128d_t M2 =	_mm_shuffle_pd(B, B, 1);
+			M2 =			_mm_mul_pd(A, M2);	// [bc, ad]
+			M1 = _mm_sub_sd(	// ac - bd
+				M1,
+				_mm_shuffle_pd(M1, M1, 1)
+			);
+			M2 = _mm_add_sd(	// ad + bc
+				M2,
+				_mm_shuffle_pd(M2, M2, 1)
+			);
+
+			this->real = _mm_cvtsd_f64(M1);
+			this->imag = _mm_cvtsd_f64(M2);
+		}
+		else {
+			// TODO
+		}
 		return *this;
 	}
 
 	template<class elem_t>
-	void complex<elem_t>::print() const {
+	sq_matrix<elem_t, 2> complex<elem_t>::mat(void) const {
+		sq_matrix<elem_t, 2> result;
+		result.data[0] = result.data[3] = this->real;
+		result.data[1] = -this->imag;
+		result.data[2] = this->imag;
+		return result;
+	}
+
+	template<class elem_t>
+	void complex<elem_t>::print(void) const {
 		printf("%5.2f %c %4.2fi\n",
-			this->data[3],
-			(this->data[2] > 0) ? '+' : '-',
-			(this->data[2] > 0) ? (this->data[2]) : (-this->data[2])
+			this->real,
+			(this->imag > 0) ? '+' : '-',
+			(this->imag > 0) ? (this->imag) : (-this->imag)
 		);
 	}
 };

@@ -30,7 +30,8 @@ namespace MAT {
 	template<class elem_t, uint32_t n>
 	class sq_matrix : public matrix<elem_t, n, n> {
 	public:
-		sq_matrix() = default;
+		sq_matrix(void);
+		~sq_matrix(void) = default;
 
 		//sq_matrix& inverse(void);
 
@@ -60,6 +61,9 @@ namespace MAT {
 	/*!<
 	 * square matrix
 	 * */
+	template<class elem_t, uint32_t n>
+	sq_matrix<elem_t, n>::sq_matrix(void) : matrix<elem_t, n, n>() {}
+
 	//sq_matrix& sq_matrix::L_matrix(void) {
 	//	if (this->LU[0] == nullptr) { LU_decomposition(); }
 	//	return *this->LU[0];
