@@ -65,13 +65,12 @@ void test_C() {
 	c1.print();
 	c2.print();
 	c3.print();
-	c3.mat().print();
-
-	MAT::matrix<f64_t, 2, 2> m1;
-	m1.init_rand();
-	m1.print();
-	MAT::matrix<f64_t, 2, 2> m2 = m1 * c3.mat();
-	m2.print();
+	MAT::sq_matrix<f64_t, 2> m3 = c1.mat();
+	m3.print();
+	MAT::sq_matrix<f64_t, 2> m3i = m3.inverse();
+	m3i.print();
+	MAT::complex<f64_t> c4(m3i);
+	c4.print();
 }
 
 

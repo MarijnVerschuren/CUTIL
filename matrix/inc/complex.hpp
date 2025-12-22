@@ -4,7 +4,7 @@
 
 #ifndef COMPLEX_HPP
 #define COMPLEX_HPP
-#include "sq_matrix.hpp"
+#include "matrix.hpp"
 
 
 
@@ -14,6 +14,8 @@ namespace MAT {
 	public:
 		complex(void) = default;
 		complex(elem_t real, elem_t imag);
+		//complex(const complex<elem_t>& complex);
+		complex(const sq_matrix<elem_t, 2>& mat);
 
 		complex& operator=(const complex& rhs);
 		complex operator+(const complex& rhs) const;
@@ -42,6 +44,12 @@ namespace MAT {
 	complex<elem_t>::complex(elem_t real, elem_t imag) {
 		this->real = real;
 		this->imag = imag;
+	}
+
+	template<class elem_t>
+	complex<elem_t>::complex(const sq_matrix<elem_t, 2>& mat) {
+		this->real = mat.data[3];
+		this->imag = mat.data[2];
 	}
 
 	template<class elem_t>

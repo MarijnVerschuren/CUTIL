@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "matrix.hpp"
 #include "types.h"
 
 
@@ -15,8 +16,6 @@ concept tf32 = std::is_same_v<T, f32_t>;
 template<typename T>
 concept tf64 = std::is_same_v<T, f64_t>;
 
-template<std::size_t m, std::size_t n>
-concept sq = (m == n);
 
 #define RAND() ((rand() % 1000) / 1000.0)
 
@@ -24,27 +23,72 @@ concept sq = (m == n);
 
 
 namespace MAT {
+
+	/*!<
+	 * enums
+	 */
+	typedef enum _option_t : u8_t {
+		NONE			= 0b00000000,
+		HEAP_ALLOC		= 0b00000001,
+		NO_PROPERTIES	= 0b00000010
+	} option_t;
+
+
+	/*!<
+	 * forward declarations
+	 * */
+	template<class elem_t, u32_t m, u32_t n, option_t opt> class matrix;
+
+
+	/*!<
+	 * property and helper classes
+	 * */
+	template<class elem_t>
+	class det_t {
+	public:
+		det_t() = default;
+		operator elem_t() const { return this->_det; }
+		// TODO make framework with which redundant calculations can be avoided (feed values)
+		elem_t& operator =(elem_t val) { return (this->_det = val); }
+	private:
+		elem_t _det;
+	};
+
+
+	/*!<
+	 * structs
+	 */  // TODO: dependency caching
+	template<bool sq, class elem_t, u32_t m, u32_t n>
+	struct properties_t {};						// default properties
+	template<class elem_t, u32_t m, u32_t n>
+	struct properties_t<true, elem_t, m, n> {	// square properties
+	    det_t<elem_t>			det;
+		matrix<elem_t, m, n, HEAP_ALLOC | NO_PROPERTIES>*	inv = nullptr;
+		// flags
+		u8_t det_en	: 1 = 0;
+		u8_t inv_en	: 1 = 0;
+	};
+
+
 	/*!<
 	 * matrix
 	 * */
-	template<class elem_t, u32_t m, u32_t n>
+	template<class elem_t, u32_t m, u32_t n, option_t opt = NONE>
 	class matrix {
-	template <class, u32_t> friend class sq_matrix;
 	template <class, u32_t, u32_t> friend class matrix;
 	template <class> friend class complex;
 	public:
-		static constexpr u8_t big = (m * n * sizeof(elem_t)) > 4096;
-		using data_t = std::conditional_t<big, elem_t*, elem_t[m*n]>;
+		static constexpr bool big = (m * n * sizeof(elem_t)) > 2048;
+		static constexpr bool sq = (m == n);
+		static constexpr bool has_props = !(opt & NO_PROPERTIES);
+		using data_t = std::conditional_t<big, elem_t*, elem_t[m * n]>;
 
 		// TODO: copy constructor: matrix(const matrix&) = default;
 		matrix(void);
 		~matrix(void);
 
 		void init_rand(void);
-		void init_identity(void) requires sq<m, n>;
-
-		void REF(void);
-		void RREF(void);
+		void init_identity(void) requires sq;
 
 		elem_t& operator()(u32_t i, u32_t j) { return this->data[i * m + j]; }
 		matrix& operator=(const matrix& rhs);
@@ -54,14 +98,23 @@ namespace MAT {
 		matrix& operator-=(const matrix& rhs);
 		matrix operator*(const elem_t scalar) const;	// scale
 		matrix& operator*=(const elem_t scalar);		// scale
-
 		template<u32_t p>
 		matrix<elem_t, m, p> operator*(const matrix<elem_t, n, p>& rhs) const;
 
+		matrix& inverse(void) requires sq;
+		det_t<elem_t> det(void) requires sq;
+
+		void REF(void);
+		void RREF(void);
+
 		void print(void) const;
 	private:
-		data_t data;
+		data_t							data;
+		properties_t<sq, elem_t, m, n>	prop;
 	};
+
+	template<class elem_t, std::size_t n>
+	using sq_matrix = matrix<elem_t, n, n>;
 }
 
 
@@ -74,14 +127,14 @@ namespace MAT {
 	/*!<
 	 * matrix
 	 * */
-	template<class elem_t, u32_t m, u32_t n>
-	matrix<elem_t, m, n>::matrix() {
+	template<class elem_t, u32_t m, u32_t n, option_t opt>
+	matrix<elem_t, m, n, opt>::matrix() {
 		if constexpr (big) {
 			this->data = (elem_t*)malloc(sizeof(elem_t) * n * m);
 		}
 	}
 
-	template<class elem_t, u32_t m, u32_t n>
+	template<class elem_t, u32_t m, u32_t n, option_t opt>
 	matrix<elem_t, m, n>::~matrix() { if constexpr (big) { free(this->data); } }
 
 	template<class elem_t, u32_t m, u32_t n>
@@ -92,8 +145,13 @@ namespace MAT {
 	}
 
 	template<class elem_t, u32_t m, u32_t n>
-	void matrix<elem_t, m, n>::init_identity(void) requires sq<m, n> {
-		// TODO: (now sq class is not needed!)
+	void matrix<elem_t, m, n>::init_identity(void) requires sq {
+		for (u32_t i = 0; i < m; i++) {
+			for (u32_t j = 0; j < n; j++) {
+				if (i == j) { this->data[i * m + j] = 1.0f; continue; }
+				this->data[i * m + j] = 0.0f;
+			}
+		}
 	}
 
 	template<class elem_t, u32_t m, u32_t n>
@@ -363,15 +421,37 @@ namespace MAT {
 	}
 
 	template<class elem_t, u32_t m, u32_t n>
-	void matrix<elem_t, m, n>::print(void) const {
-		for (u32_t i = 0; i < m; i++) {
-			printf("[");
-			for (u32_t j = 0; j < n; j++) {
-				printf("%5.2f ", this->data[i * n + j]);
+	matrix<elem_t, m, n>& matrix<elem_t, m, n>::inverse(void) requires sq {
+		if (this->prop.inv_en) { return *this->prop.inv; }
+		this->prop.inv = new matrix<elem_t, m, n>;
+		this->prop.inv_en = 1;	// TODO: make func
+
+		// if constexpr (m == 2) {
+		// 	// TODO use simple formula
+		// }
+		if constexpr (!big) {
+			u8_t i; matrix<elem_t, m, n*2> tmp;
+			for (i = 0; i < m; i++) {
+				memcpy(&tmp.data[i * n * 2], &this->data[i * n], sizeof(elem_t) * n);
+				tmp.data[i * n * 2 + n + i] = 1.0f;
+			} tmp.RREF();
+			for (i = 0; i < n; i++) {
+				memcpy(&this->prop.inv->data[i * n], &tmp.data[i * n * 2 + n], sizeof(elem_t) * n);
 			}
-			printf("]\n");
+		} else {
+			// TODO clac inverse for big matrices
 		}
-		printf("\n");
+		return *this->prop.inv;
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	det_t<elem_t> matrix<elem_t, m, n>::det(void) requires sq {
+		if (this->prop.det_en) { return this->prop.det; }
+
+		// TODO calc det
+
+		this->prop.det_en = 1;
+		return this->prop.det;
 	}
 
 	template<class elem_t, u32_t m, u32_t n>
@@ -517,6 +597,18 @@ namespace MAT {
 				}
 			}
 		}
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	void matrix<elem_t, m, n>::print(void) const {
+		for (u32_t i = 0; i < m; i++) {
+			printf("[");
+			for (u32_t j = 0; j < n; j++) {
+				printf("%5.2f ", this->data[i * n + j]);
+			}
+			printf("]\n");
+		}
+		printf("\n");
 	}
 }
 
