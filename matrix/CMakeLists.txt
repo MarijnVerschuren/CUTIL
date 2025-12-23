@@ -16,10 +16,10 @@ set(PROJECT_SOURCE_DIR "src")
 set(PROJECT_INCLUDE_DIR "inc")
 set(PROJECT_TEST_DIR "test")
 
-set(CMAKE_CXX_FLAGS "-flto -funroll-loops -ffast-math -mavx -mavx2 -mfma -O3")
+#set(CMAKE_CXX_FLAGS "-flto -funroll-loops -ffast-math -mavx -mavx2 -mfma -O3")
+set(CMAKE_CXX_FLAGS "-ffast-math -mavx -mavx2 -mfma -O0 -g")
 add_compile_options(
     -DAVX256
-    -g
 )
 
 

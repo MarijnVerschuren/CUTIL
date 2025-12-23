@@ -67,6 +67,8 @@ void test_C() {
 	c3.print();
 	MAT::sq_matrix<f64_t, 2> m3 = c1.mat();
 	m3.print();
+	printf("%f\n", (f64_t)m3.det());
+
 	MAT::sq_matrix<f64_t, 2> m3i = m3.inverse();
 	m3i.print();
 	MAT::complex<f64_t> c4(m3i);

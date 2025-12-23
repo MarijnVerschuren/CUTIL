@@ -23,21 +23,10 @@ concept tf64 = std::is_same_v<T, f64_t>;
 
 
 namespace MAT {
-
-	/*!<
-	 * enums
-	 */
-	typedef enum _option_t : u8_t {
-		NONE			= 0b00000000,
-		HEAP_ALLOC		= 0b00000001,
-		NO_PROPERTIES	= 0b00000010
-	} option_t;
-
-
 	/*!<
 	 * forward declarations
 	 * */
-	template<class elem_t, u32_t m, u32_t n, option_t opt> class matrix;
+	template<class elem_t, u32_t m, u32_t n> class matrix;
 
 
 	/*!<
@@ -63,7 +52,7 @@ namespace MAT {
 	template<class elem_t, u32_t m, u32_t n>
 	struct properties_t<true, elem_t, m, n> {	// square properties
 	    det_t<elem_t>			det;
-		matrix<elem_t, m, n, HEAP_ALLOC | NO_PROPERTIES>*	inv = nullptr;
+		matrix<elem_t, m, n>*	inv = nullptr;
 		// flags
 		u8_t det_en	: 1 = 0;
 		u8_t inv_en	: 1 = 0;
@@ -73,14 +62,13 @@ namespace MAT {
 	/*!<
 	 * matrix
 	 * */
-	template<class elem_t, u32_t m, u32_t n, option_t opt = NONE>
+	template<class elem_t, u32_t m, u32_t n>
 	class matrix {
 	template <class, u32_t, u32_t> friend class matrix;
 	template <class> friend class complex;
 	public:
 		static constexpr bool big = (m * n * sizeof(elem_t)) > 2048;
 		static constexpr bool sq = (m == n);
-		static constexpr bool has_props = !(opt & NO_PROPERTIES);
 		using data_t = std::conditional_t<big, elem_t*, elem_t[m * n]>;
 
 		// TODO: copy constructor: matrix(const matrix&) = default;
@@ -104,8 +92,8 @@ namespace MAT {
 		matrix& inverse(void) requires sq;
 		det_t<elem_t> det(void) requires sq;
 
-		void REF(void);
-		void RREF(void);
+		elem_t REF(void);	// returns delta det
+		elem_t RREF(void);	// returns delta det
 
 		void print(void) const;
 	private:
@@ -127,14 +115,14 @@ namespace MAT {
 	/*!<
 	 * matrix
 	 * */
-	template<class elem_t, u32_t m, u32_t n, option_t opt>
-	matrix<elem_t, m, n, opt>::matrix() {
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n>::matrix() {
 		if constexpr (big) {
 			this->data = (elem_t*)malloc(sizeof(elem_t) * n * m);
 		}
 	}
 
-	template<class elem_t, u32_t m, u32_t n, option_t opt>
+	template<class elem_t, u32_t m, u32_t n>
 	matrix<elem_t, m, n>::~matrix() { if constexpr (big) { free(this->data); } }
 
 	template<class elem_t, u32_t m, u32_t n>
@@ -430,14 +418,18 @@ namespace MAT {
 		// 	// TODO use simple formula
 		// }
 		if constexpr (!big) {
-			u8_t i; matrix<elem_t, m, n*2> tmp;
+			// TODO: improve: why did i get stack smashing when using stack for matrix alloc?????? heap is slower!!
+			u8_t i; matrix<elem_t, m, n*2>* tmp = new matrix<elem_t, m, n*2>;
 			for (i = 0; i < m; i++) {
-				memcpy(&tmp.data[i * n * 2], &this->data[i * n], sizeof(elem_t) * n);
-				tmp.data[i * n * 2 + n + i] = 1.0f;
-			} tmp.RREF();
-			for (i = 0; i < n; i++) {
-				memcpy(&this->prop.inv->data[i * n], &tmp.data[i * n * 2 + n], sizeof(elem_t) * n);
+				memcpy(&tmp->data[i * n * 2], &this->data[i * n], sizeof(elem_t) * n);
+				memset(&tmp->data[i * n * 2 + n], 0, sizeof(elem_t) * n);
+				tmp->data[i * n * 2 + n + i] = 1.0f;
 			}
+			tmp->RREF();
+			for (i = 0; i < n; i++) {
+				memcpy(&this->prop.inv->data[i * n], &tmp->data[i * n * 2 + n], sizeof(elem_t) * n);
+			}
+			delete tmp;
 		} else {
 			// TODO clac inverse for big matrices
 		}
@@ -448,16 +440,24 @@ namespace MAT {
 	det_t<elem_t> matrix<elem_t, m, n>::det(void) requires sq {
 		if (this->prop.det_en) { return this->prop.det; }
 
-		// TODO calc det
+		if constexpr (!big) {
+			matrix<elem_t, m, n> tmp;
+			memcpy(tmp.data, this->data, sizeof(elem_t) * n * m);
+			elem_t ddet = tmp.REF();
+			for (u32_t i = 0; i < m; i++) {
+				ddet *= tmp.data[i * m + i];
+			}
+			this->prop.det = ddet;
+		}
 
 		this->prop.det_en = 1;
 		return this->prop.det;
 	}
 
 	template<class elem_t, u32_t m, u32_t n>
-	void matrix<elem_t, m, n>::REF(void) {
+	elem_t matrix<elem_t, m, n>::REF(void) {
 		u32_t i, j, k;
-		elem_t pivot, tmp;
+		elem_t pivot, tmp, ddet = 1.0f;
 		for (i = 0; i < m; i++) {
 			for (j = i; j < m; j++) {
 				pivot = this->data[j * n + i];
@@ -465,7 +465,7 @@ namespace MAT {
 			}
 			if (pivot == 0.0f) { continue; }
 			if (i != j) { // swap rows
-				k = 0;
+				ddet *= -1; k = 0;
 				if constexpr (tf32<elem_t> && n > 7) {
 					v256s_t A, B;
 					for (k = j; k < n; k += 8) {
@@ -514,12 +514,13 @@ namespace MAT {
 				}
 			}
 		}
+		return ddet;
 	}
 
 	template<class elem_t, u32_t m, u32_t n>
-	void matrix<elem_t, m, n>::RREF(void) {
+	elem_t matrix<elem_t, m, n>::RREF(void) {
 		u32_t i, j, k;
-		elem_t pivot, tmp;
+		elem_t pivot, tmp, ddet = 1.0f;
 		for (i = 0; i < m; i++) {
 			for (j = i; j < m; j++) {
 				pivot = data[j * n + i];
@@ -527,7 +528,7 @@ namespace MAT {
 			}
 			if (pivot == 0.0f) { continue; }
 			if (i != j) { // swap rows
-				k = 0;
+				ddet *= -1; k = 0;
 				if constexpr (tf32<elem_t> && n > 7) {
 					v256s_t A, B;
 					for (k = j; k < n; k += 8) {
@@ -553,7 +554,7 @@ namespace MAT {
 			}
 
 			if (pivot != 1.0f) {
-				k = 0; tmp = 1/pivot;
+				ddet *= pivot; k = 0; tmp = 1/pivot;
 				if constexpr (tf32<elem_t> && n > 7) {
 					v256s_t A, B = _mm256_set1_ps(tmp);
 					for (k = j; k < n; k += 8) {
@@ -597,6 +598,7 @@ namespace MAT {
 				}
 			}
 		}
+		return ddet;
 	}
 
 	template<class elem_t, u32_t m, u32_t n>
