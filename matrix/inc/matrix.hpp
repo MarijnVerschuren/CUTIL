@@ -48,9 +48,14 @@ namespace MAT {
 	 * structs
 	 */  // TODO: dependency caching
 	template<bool sq, class elem_t, u32_t m, u32_t n>
-	struct properties_t {};						// default properties
+	class properties_t {
+	};						// default properties
 	template<class elem_t, u32_t m, u32_t n>
-	struct properties_t<true, elem_t, m, n> {	// square properties
+	class properties_t<true, elem_t, m, n> {	// square properties
+	public:
+		inline void set_det(const elem_t det)			{ this->det = det; this->det_en = true; }
+		inline void set_inv(matrix<elem_t, m, n>* inv)	{ this->inv = inv; this->inv_en = true; }
+
 	    det_t<elem_t>			det;
 		matrix<elem_t, m, n>*	inv = nullptr;
 		// flags
@@ -89,13 +94,15 @@ namespace MAT {
 		template<u32_t p>
 		matrix<elem_t, m, p> operator*(const matrix<elem_t, n, p>& rhs) const;
 
-		matrix& inverse(void) requires sq;
-		det_t<elem_t> det(void) requires sq;
-
 		elem_t REF(void);	// returns delta det
 		elem_t RREF(void);	// returns delta det
 
 		void print(void) const;
+
+
+		matrix* adj(void) requires sq;
+		matrix* inv(void) requires sq;
+		det_t<elem_t> det(void) requires sq;
 	private:
 		data_t							data;
 		properties_t<sq, elem_t, m, n>	prop;
@@ -408,15 +415,27 @@ namespace MAT {
 		return *this;
 	}
 
-	template<class elem_t, u32_t m, u32_t n>
-	matrix<elem_t, m, n>& matrix<elem_t, m, n>::inverse(void) requires sq {
-		if (this->prop.inv_en) { return *this->prop.inv; }
-		this->prop.inv = new matrix<elem_t, m, n>;
-		this->prop.inv_en = 1;	// TODO: make func
 
-		// if constexpr (m == 2) {
-		// 	// TODO use simple formula
-		// }
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n>* matrix<elem_t, m, n>::adj(void) requires sq {
+		if constexpr (m == 2) {
+
+		}
+		if (this->prop.inv_en | this->prop.det_en) { return (*this->prop.inv) * (1/this->prop.det); }
+
+		return *this;
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n>* matrix<elem_t, m, n>::inv(void) requires sq {
+		if (this->prop.inv_en) { return this->prop.inv; }
+		this->prop.set_inv(new matrix<elem_t, m, n>);
+
+		if constexpr (m == 2) {
+
+			// TODO use simple formula
+		}
 		if constexpr (!big) {
 			// TODO: improve: why did i get stack smashing when using stack for matrix alloc?????? heap is slower!!
 			u8_t i; matrix<elem_t, m, n*2>* tmp = new matrix<elem_t, m, n*2>;
@@ -425,7 +444,7 @@ namespace MAT {
 				memset(&tmp->data[i * n * 2 + n], 0, sizeof(elem_t) * n);
 				tmp->data[i * n * 2 + n + i] = 1.0f;
 			}
-			tmp->RREF();
+			this->prop.set_det(tmp->RREF());
 			for (i = 0; i < n; i++) {
 				memcpy(&this->prop.inv->data[i * n], &tmp->data[i * n * 2 + n], sizeof(elem_t) * n);
 			}
@@ -433,26 +452,29 @@ namespace MAT {
 		} else {
 			// TODO clac inverse for big matrices
 		}
-		return *this->prop.inv;
+		return this->prop.inv;
 	}
 
 	template<class elem_t, u32_t m, u32_t n>
 	det_t<elem_t> matrix<elem_t, m, n>::det(void) requires sq {
 		if (this->prop.det_en) { return this->prop.det; }
 
-		if constexpr (!big) {
+		if constexpr (m == 2) {
+			this->prop.set_det(this->data[0] * this->data[3] - this->data[1] * this->data[2]);
+		} else if constexpr (!big) {
 			matrix<elem_t, m, n> tmp;
 			memcpy(tmp.data, this->data, sizeof(elem_t) * n * m);
 			elem_t ddet = tmp.REF();
 			for (u32_t i = 0; i < m; i++) {
 				ddet *= tmp.data[i * m + i];
 			}
-			this->prop.det = ddet;
+			this->prop.set_det(ddet);
 		}
 
-		this->prop.det_en = 1;
 		return this->prop.det;
 	}
+
+
 
 	template<class elem_t, u32_t m, u32_t n>
 	elem_t matrix<elem_t, m, n>::REF(void) {
