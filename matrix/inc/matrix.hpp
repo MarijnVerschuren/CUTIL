@@ -23,46 +23,7 @@ concept tf64 = std::is_same_v<T, f64_t>;
 
 
 namespace MAT {
-	/*!<
-	 * forward declarations
-	 * */
-	template<class elem_t, u32_t m, u32_t n> class matrix;
-
-
-	/*!<
-	 * property and helper classes
-	 * */
-	template<class elem_t>
-	class det_t {
-	public:
-		det_t() = default;
-		operator elem_t() const { return this->_det; }
-		// TODO make framework with which redundant calculations can be avoided (feed values)
-		elem_t& operator =(elem_t val) { return (this->_det = val); }
-	private:
-		elem_t _det;
-	};
-
-
-	/*!<
-	 * structs
-	 */  // TODO: dependency caching
-	template<bool sq, class elem_t, u32_t m, u32_t n>
-	class properties_t {
-	};						// default properties
-	template<class elem_t, u32_t m, u32_t n>
-	class properties_t<true, elem_t, m, n> {	// square properties
-	public:
-		inline void set_det(const elem_t det)			{ this->det = det; this->det_en = true; }
-		inline void set_inv(matrix<elem_t, m, n>* inv)	{ this->inv = inv; this->inv_en = true; }
-
-	    det_t<elem_t>			det;
-		matrix<elem_t, m, n>*	inv = nullptr;
-		// flags
-		u8_t det_en	: 1 = 0;
-		u8_t inv_en	: 1 = 0;
-	};
-
+	// TODO: implement a caching system that keeps track of dependencies and resolves them for big matrecies!! wrapper??
 
 	/*!<
 	 * matrix
@@ -91,21 +52,24 @@ namespace MAT {
 		matrix& operator-=(const matrix& rhs);
 		matrix operator*(const elem_t scalar) const;	// scale
 		matrix& operator*=(const elem_t scalar);		// scale
+		matrix operator/(const elem_t scalar) const;	// scale
+		matrix& operator/=(const elem_t scalar);		// scale
+
 		template<u32_t p>
 		matrix<elem_t, m, p> operator*(const matrix<elem_t, n, p>& rhs) const;
 
 		elem_t REF(void);	// returns delta det
 		elem_t RREF(void);	// returns delta det
+		matrix<elem_t, n, m> trp(void) const;
 
 		void print(void) const;
 
-
-		matrix* adj(void) requires sq;
-		matrix* inv(void) requires sq;
-		det_t<elem_t> det(void) requires sq;
+		matrix cof(void) requires sq;
+		matrix adj(void) requires sq;
+		matrix inv(void) requires sq;
+		elem_t det(void) requires sq;
 	private:
-		data_t							data;
-		properties_t<sq, elem_t, m, n>	prop;
+		data_t data;
 	};
 
 	template<class elem_t, std::size_t n>
@@ -415,66 +379,11 @@ namespace MAT {
 		return *this;
 	}
 
-
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n> matrix<elem_t, m, n>::operator/(const elem_t scalar) const	{ return this->operator*(1/scalar); }
 
 	template<class elem_t, u32_t m, u32_t n>
-	matrix<elem_t, m, n>* matrix<elem_t, m, n>::adj(void) requires sq {
-		if constexpr (m == 2) {
-
-		}
-		if (this->prop.inv_en | this->prop.det_en) { return (*this->prop.inv) * (1/this->prop.det); }
-
-		return *this;
-	}
-
-	template<class elem_t, u32_t m, u32_t n>
-	matrix<elem_t, m, n>* matrix<elem_t, m, n>::inv(void) requires sq {
-		if (this->prop.inv_en) { return this->prop.inv; }
-		this->prop.set_inv(new matrix<elem_t, m, n>);
-
-		if constexpr (m == 2) {
-
-			// TODO use simple formula
-		}
-		if constexpr (!big) {
-			// TODO: improve: why did i get stack smashing when using stack for matrix alloc?????? heap is slower!!
-			u8_t i; matrix<elem_t, m, n*2>* tmp = new matrix<elem_t, m, n*2>;
-			for (i = 0; i < m; i++) {
-				memcpy(&tmp->data[i * n * 2], &this->data[i * n], sizeof(elem_t) * n);
-				memset(&tmp->data[i * n * 2 + n], 0, sizeof(elem_t) * n);
-				tmp->data[i * n * 2 + n + i] = 1.0f;
-			}
-			this->prop.set_det(tmp->RREF());
-			for (i = 0; i < n; i++) {
-				memcpy(&this->prop.inv->data[i * n], &tmp->data[i * n * 2 + n], sizeof(elem_t) * n);
-			}
-			delete tmp;
-		} else {
-			// TODO clac inverse for big matrices
-		}
-		return this->prop.inv;
-	}
-
-	template<class elem_t, u32_t m, u32_t n>
-	det_t<elem_t> matrix<elem_t, m, n>::det(void) requires sq {
-		if (this->prop.det_en) { return this->prop.det; }
-
-		if constexpr (m == 2) {
-			this->prop.set_det(this->data[0] * this->data[3] - this->data[1] * this->data[2]);
-		} else if constexpr (!big) {
-			matrix<elem_t, m, n> tmp;
-			memcpy(tmp.data, this->data, sizeof(elem_t) * n * m);
-			elem_t ddet = tmp.REF();
-			for (u32_t i = 0; i < m; i++) {
-				ddet *= tmp.data[i * m + i];
-			}
-			this->prop.set_det(ddet);
-		}
-
-		return this->prop.det;
-	}
-
-
+	matrix<elem_t, m, n>& matrix<elem_t, m, n>::operator/=(const elem_t scalar)		{ return this->operator*=(1/scalar); }
 
 	template<class elem_t, u32_t m, u32_t n>
 	elem_t matrix<elem_t, m, n>::REF(void) {
@@ -623,6 +532,21 @@ namespace MAT {
 		return ddet;
 	}
 
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, n, m> matrix<elem_t, m, n>::trp(void) const {
+		matrix<elem_t, n, m> result;
+
+		for (u32_t i = 0; i < m; i++) {
+			for (u32_t j = 0; j < n; j++) {
+				result.data[j * m + i] = this->data[i * n + j];
+			}
+		}
+
+		return result;
+	}
+
+
 	template<class elem_t, u32_t m, u32_t n>
 	void matrix<elem_t, m, n>::print(void) const {
 		for (u32_t i = 0; i < m; i++) {
@@ -633,6 +557,69 @@ namespace MAT {
 			printf("]\n");
 		}
 		printf("\n");
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n> matrix<elem_t, m, n>::cof(void) requires sq {
+		if constexpr (m == 2) {
+			matrix<elem_t, m, n> result;
+			result.data[0] = this->data[3];
+			result.data[1] = -this->data[2];
+			result.data[2] = -this->data[1];
+			result.data[3] = this->data[0];
+			return result;
+		} else {
+			return this->adj().trp();
+		}
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n> matrix<elem_t, m, n>::adj(void) requires sq {
+		if constexpr (m == 2) {
+			matrix<elem_t, m, n> result;
+			result.data[0] = this->data[3];
+			result.data[1] = -this->data[1];
+			result.data[2] = -this->data[2];
+			result.data[3] = this->data[0];
+			return result;
+		} else {
+			return this->inv() * this->det();	// TODO: inprove this using caching!!!!!
+		}
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	matrix<elem_t, m, n> matrix<elem_t, m, n>::inv(void) requires sq {
+		if constexpr (m == 2) {
+			return this->adj() / this->det();
+		} else {	// TODO: is this the best for large matrecies?
+			matrix<elem_t, m, n> result;
+			u32_t i;
+			matrix<elem_t, m, n*2> tmp;
+			for (i = 0; i < m; i++) {
+				memcpy(&tmp->data[i * n * 2], &this->data[i * n], sizeof(elem_t) * n);
+				memset(&tmp->data[i * n * 2 + n], 0, sizeof(elem_t) * n);
+				tmp->data[i * n * 2 + n + i] = 1.0f;
+			}
+			tmp->RREF();	// TODO: store or use determinant (ddet is determinant of original matrix)
+			for (i = 0; i < n; i++) {
+				memcpy(&result.data[i * n], &tmp->data[i * n * 2 + n], sizeof(elem_t) * n);
+			}
+			return result;
+		}
+	}
+
+	template<class elem_t, u32_t m, u32_t n>
+	elem_t matrix<elem_t, m, n>::det(void) requires sq {
+		if constexpr (m == 2) {
+			return this->data[0] * this->data[3] - this->data[1] * this->data[2];
+		} else {	// TODO: is this the best for large matrecies?
+			matrix<elem_t, m, n> tmp = *this;	// TODO: improve or write copy/set operation
+			elem_t ddet = tmp.REF();
+			for (u32_t i = 0; i < m; i++) {
+				ddet *= tmp.data[i * m + i];
+			}
+			return ddet;
+		}
 	}
 }
 

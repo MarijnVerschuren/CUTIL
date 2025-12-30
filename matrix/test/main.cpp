@@ -45,6 +45,7 @@ void test_mat_mul() {
 	mat_b.print();
 	mat_c.print();
 
+
 }
 
 
@@ -69,19 +70,33 @@ void test_C() {
 	m3.print();
 	printf("%f\n", (f64_t)m3.det());
 
-	MAT::sq_matrix<f64_t, 2> m3i = m3.inverse();
+	MAT::sq_matrix<f64_t, 2> m3a = m3.adj();
+	m3a.print();
+	MAT::sq_matrix<f64_t, 2> m3i = m3.inv();
 	m3i.print();
 	MAT::complex<f64_t> c4(m3i);
 	c4.print();
 }
 
 
+void test_trp() {
+	MAT::matrix<f64_t, 2, 3> mat_a; mat_a.init_rand();
+	MAT::matrix<f64_t, 3, 2> mat_b = mat_a.trp();
+	mat_a.print();
+	mat_b.print();
+}
+
+
+// TODO: make nicer tests
+
+
 int main(void) {
 	srand(1);
 
-	test_math();
-	test_timing();
-	test_C();
+	// test_math();
+	// test_timing();
+	// test_C();
+	test_trp();
 
 	return 0;
 }
