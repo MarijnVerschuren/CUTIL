@@ -532,7 +532,6 @@ namespace MAT {
 		return ddet;
 	}
 
-
 	template<class elem_t, u32_t m, u32_t n>
 	matrix<elem_t, n, m> matrix<elem_t, m, n>::trp(void) const {
 		matrix<elem_t, n, m> result;
@@ -545,7 +544,6 @@ namespace MAT {
 
 		return result;
 	}
-
 
 	template<class elem_t, u32_t m, u32_t n>
 	void matrix<elem_t, m, n>::print(void) const {

@@ -7,6 +7,7 @@
 
 
 int main() {
+
 	for (uint8_t e = 0; e < 8; e++) {
 		for (uint8_t c = 0; c < 8; c++) {
 			cprintf((color_t)(c | (e << 4)), "c: %d, e: %d\n", c, e);

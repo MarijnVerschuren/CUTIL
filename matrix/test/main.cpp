@@ -53,9 +53,14 @@ void test_timing() {
 	MAT::matrix<f32_t, 1000, 1000> mat_a;	mat_a.init_rand();
 	MAT::matrix<f32_t, 1000, 1000> mat_b;	mat_b.init_rand();
 
+	mat_a.print();
+	mat_b.print();
+
 	start = std::chrono::steady_clock::now();
 	MAT::matrix<f32_t, 1000, 1000> mat_c = mat_a * mat_b;
 	end = std::chrono::steady_clock::now();
+	mat_c.print();
+
 	printf("1000x1000 mul took: %llu ns\n", std::chrono::duration_cast<std::chrono::microseconds> (end - start).count());
 }
 
@@ -94,9 +99,9 @@ int main(void) {
 	srand(1);
 
 	// test_math();
-	// test_timing();
-	// test_C();
-	test_trp();
+	test_timing();
+	test_C();
+	//test_trp();
 
 	return 0;
 }
